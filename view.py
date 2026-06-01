@@ -57,6 +57,10 @@ class Screen:
             config.STUDENT_CARD_WIDTH,
             config.STUDENT_CARD_HEIGHT,
         )
+
+        student_card_img = pygame.image.load(config.STUDENT_CARD_PATH).convert_alpha()
+        self.student_card_image = pygame.transform.scale(student_card_img, (config.STUDENT_CARD_WIDTH, config.STUDENT_CARD_HEIGHT))
+
         self.allow_button_rect = pygame.Rect(
             config.ALLOW_BUTTON_X,
             config.ALLOW_BUTTON_Y,
@@ -243,7 +247,7 @@ class Screen:
         self.draw_table_tools(allow_pressed, deny_pressed)
 
         if student_card_on_table and person is not None and person.document is not None:
-            pygame.draw.rect(self.game_scene, config.STUDENT_CARD_COLOR, self.student_card_rect)
+            self.game_scene.blit(self.student_card_image, self.student_card_rect)
 
     def get_person_rect(self, visitor_position) -> pygame.Rect:
         if visitor_position is None:

@@ -29,6 +29,16 @@ class Screen:
         table_image = pygame.image.load(config.TABLE_PATH).convert_alpha()
         self.table = pygame.transform.scale(table_image, (config.TABLE_WIDTH, config.TABLE_HEIGHT))
 
+        allow_img = pygame.image.load(config.ALLOW_BUTTON_PATH).convert_alpha()
+        self.allow_button_image = pygame.transform.scale(allow_img, (config.ALLOW_BUTTON_SIZE, config.ALLOW_BUTTON_SIZE))
+        allow_pressed_img = pygame.image.load(config.ALLOW_BUTTON_PRESSED_PATH).convert_alpha()
+        self.allow_button_pressed_image = pygame.transform.scale(allow_pressed_img, (config.ALLOW_BUTTON_SIZE, config.ALLOW_BUTTON_SIZE))
+
+        deny_img = pygame.image.load(config.DENY_BUTTON_PATH).convert_alpha()
+        self.deny_button_image = pygame.transform.scale(deny_img, (config.DENY_BUTTON_SIZE, config.DENY_BUTTON_SIZE))
+        deny_pressed_img = pygame.image.load(config.DENY_BUTTON_PRESSED_PATH).convert_alpha()
+        self.deny_button_pressed_image = pygame.transform.scale(deny_pressed_img, (config.DENY_BUTTON_SIZE, config.DENY_BUTTON_SIZE))
+
         self.person_rect = pygame.Rect(
             config.PERSON_RECT_X,
             config.PERSON_RECT_Y,
@@ -47,11 +57,17 @@ class Screen:
             config.STUDENT_CARD_WIDTH,
             config.STUDENT_CARD_HEIGHT,
         )
-        self.stamp_rect = pygame.Rect(
-            config.STAMP_X,
-            config.STAMP_Y,
-            config.STAMP_SIZE,
-            config.STAMP_SIZE,
+        self.allow_button_rect = pygame.Rect(
+            config.ALLOW_BUTTON_X,
+            config.ALLOW_BUTTON_Y,
+            config.ALLOW_BUTTON_SIZE,
+            config.ALLOW_BUTTON_SIZE,
+        )
+        self.deny_button_rect = pygame.Rect(
+            config.DENY_BUTTON_X,
+            config.DENY_BUTTON_Y,
+            config.DENY_BUTTON_SIZE,
+            config.DENY_BUTTON_SIZE,
         )
 
         self.menu_buttons = {}
@@ -182,9 +198,11 @@ class Screen:
         instruction_lines=None,
         visitor_position=None,
         student_card_on_table: bool = True,
+        allow_pressed: bool = False,
+        deny_pressed: bool = False,
     ) -> None:
         self.screen.fill(config.MENU_BACKGROUND_COLOR)
-        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table)
+        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed)
 
         scaled_scene = pygame.transform.scale(self.game_scene, self.game_rect.size)
         self.screen.blit(scaled_scene, self.game_rect)
@@ -206,6 +224,8 @@ class Screen:
         visitor_visible: bool,
         visitor_position,
         student_card_on_table: bool,
+        allow_pressed: bool = False,
+        deny_pressed: bool = False,
     ) -> None:
         self.game_scene.blit(self.background_image, (config.BACKGROUND_X, config.BACKGROUND_Y))
 
@@ -220,7 +240,7 @@ class Screen:
             )
 
         self.game_scene.blit(self.table, (config.TABLE_X, config.TABLE_Y))
-        self.draw_table_tools()
+        self.draw_table_tools(allow_pressed, deny_pressed)
 
         if student_card_on_table and person is not None and person.document is not None:
             pygame.draw.rect(self.game_scene, config.STUDENT_CARD_COLOR, self.student_card_rect)
@@ -272,14 +292,16 @@ class Screen:
         label_rect = label.get_rect(topleft=(config.RESULT_X, config.RESULT_Y))
         self.screen.blit(label, label_rect)
 
-    def draw_table_tools(self) -> None:
-        pygame.draw.rect(self.game_scene, config.STAMP_COLOR, self.stamp_rect)
-        pygame.draw.circle(
-            self.game_scene,
-            config.DENY_BUTTON_COLOR,
-            (config.DENY_BUTTON_X, config.DENY_BUTTON_Y),
-            config.DENY_BUTTON_RADIUS,
-        )
+    def draw_table_tools(self, allow_pressed: bool, deny_pressed: bool) -> None:
+        if allow_pressed:
+            self.game_scene.blit(self.allow_button_pressed_image, self.allow_button_rect)
+        else:
+            self.game_scene.blit(self.allow_button_image, self.allow_button_rect)
+            
+        if deny_pressed:
+            self.game_scene.blit(self.deny_button_pressed_image, self.deny_button_rect)
+        else:
+            self.game_scene.blit(self.deny_button_image, self.deny_button_rect)
 
     def draw_student_card_panel(self, person) -> None:
         panel = pygame.Rect(0, 0, config.STUDENT_CARD_PANEL_WIDTH, config.STUDENT_CARD_PANEL_HEIGHT)
@@ -431,13 +453,13 @@ class Screen:
 
         return self.student_card_rect.collidepoint(game_pos)
 
-    def is_stamp_clicked(self, mouse_pos) -> bool:
+    def is_allow_button_clicked(self, mouse_pos) -> bool:
         game_pos = self.get_game_mouse_pos(mouse_pos)
 
         if game_pos is None:
             return False
 
-        return self.stamp_rect.collidepoint(game_pos)
+        return self.allow_button_rect.collidepoint(game_pos)
 
     def is_deny_button_clicked(self, mouse_pos) -> bool:
         game_pos = self.get_game_mouse_pos(mouse_pos)
@@ -445,10 +467,7 @@ class Screen:
         if game_pos is None:
             return False
 
-        dx = game_pos[0] - config.DENY_BUTTON_X
-        dy = game_pos[1] - config.DENY_BUTTON_Y
-
-        return dx * dx + dy * dy <= config.DENY_BUTTON_RADIUS * config.DENY_BUTTON_RADIUS
+        return self.deny_button_rect.collidepoint(game_pos)
 
     def update_screen(self) -> None:
         pygame.display.update()

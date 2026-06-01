@@ -39,6 +39,8 @@ class GameController:
         self.visitor_state = "NONE"
         self.visitor_x = 0.0
         self.leaving_person = None
+        self.allow_pressed = False
+        self.deny_pressed = False
 
         if not self.music_enabled:
             pygame.mixer.music.pause()
@@ -82,6 +84,8 @@ class GameController:
                 self.get_instruction_lines(),
                 visitor_position=visitor_pos,
                 student_card_on_table=student_card_on_table,
+                allow_pressed=self.allow_pressed,
+                deny_pressed=self.deny_pressed,
             )
 
     def handle_events(self):
@@ -94,7 +98,7 @@ class GameController:
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.handle_mouse_down(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self.handle_mouse_up()
+                self.handle_mouse_up(event.pos)
             elif event.type == pygame.MOUSEMOTION and self.active_slider is not None:
                 self.handle_slider_drag(event.pos)
 
@@ -152,18 +156,27 @@ class GameController:
             return
         elif not self.visitor_visible or self.visitor_state != "AT_DESK":
             return
-        elif self.view.is_stamp_clicked(mouse_pos):
-            self.make_decision(Decision.ALLOW)
+        elif self.view.is_allow_button_clicked(mouse_pos):
+            self.allow_pressed = True
         elif self.view.is_deny_button_clicked(mouse_pos):
-            self.make_decision(Decision.DENY)
+            self.deny_pressed = True
         elif self.has_current_document() and self.view.is_student_card_clicked(mouse_pos):
             if self.visitor_state == "AT_DESK":
                 self.student_card_open = not self.student_card_open
 
-    def handle_mouse_up(self):
+    def handle_mouse_up(self, mouse_pos=None):
         if self.active_slider is not None:
             self.save_settings()
             self.active_slider = None
+            
+        if self.screen_name == config.SCREEN_GAME and mouse_pos is not None:
+            if self.allow_pressed and self.view.is_allow_button_clicked(mouse_pos):
+                self.make_decision(Decision.ALLOW)
+            elif self.deny_pressed and self.view.is_deny_button_clicked(mouse_pos):
+                self.make_decision(Decision.DENY)
+                
+            self.allow_pressed = False
+            self.deny_pressed = False
 
     def handle_slider_drag(self, mouse_pos):
         if self.active_slider == config.SLIDER_MUSIC_VOLUME:

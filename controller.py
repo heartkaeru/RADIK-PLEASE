@@ -86,6 +86,7 @@ class GameController:
                 student_card_on_table=student_card_on_table,
                 allow_pressed=self.allow_pressed,
                 deny_pressed=self.deny_pressed,
+                visitor_state=self.visitor_state,
             )
 
     def handle_events(self):

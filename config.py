@@ -473,7 +473,6 @@ NO_DOCUMENT = "no_document"
 BAD_BIRTH_DATE = "bad_birth_date"
 BAD_ISSUE_DATE = "bad_issue_date"
 BAD_GROUP_FORMAT = "bad_group_format"
-BAD_GROUP_PREFIX_ERROR = "bad_group_prefix"
 BAD_EDUCATION_FORM = "bad_education_form"
 BAD_EDUCATION_LEVEL = "bad_education_level"
 BAD_INSTITUTE = "bad_institute"
@@ -517,7 +516,7 @@ CHECK_ERROR_REASONS = {
     CHECK_DOCUMENT: (NO_DOCUMENT,),
     CHECK_BIRTH_DATE: (BAD_BIRTH_DATE,),
     CHECK_ISSUE_DATE: (BAD_ISSUE_DATE,),
-    CHECK_GROUP: (BAD_GROUP_FORMAT, BAD_GROUP_PREFIX_ERROR),
+    CHECK_GROUP: (BAD_GROUP_FORMAT,),
     CHECK_EDUCATION_FORM: (BAD_EDUCATION_FORM,),
     CHECK_EDUCATION_LEVEL: (BAD_EDUCATION_LEVEL,),
     CHECK_INSTITUTE: (BAD_INSTITUTE,),
@@ -528,7 +527,6 @@ INVALID_REASONS = (
     BAD_BIRTH_DATE,
     BAD_ISSUE_DATE,
     BAD_GROUP_FORMAT,
-    BAD_GROUP_PREFIX_ERROR,
     BAD_EDUCATION_FORM,
     BAD_EDUCATION_LEVEL,
     BAD_INSTITUTE,
@@ -541,7 +539,7 @@ NO_DATE_TEXT = "нет данных"
 
 STUDENT_CARD_TEXT = "Студенческий билет"
 DOCUMENT_TYPE_STUDENT = "Студенческий билет"
-DOCUMENT_TYPE_VIP = "Спецпропуск"
+DOCUMENT_TYPE_VIP = "Удостоверение преподавателя"
 PERSON_FULL_NAME_TEXT = "ФИО"
 PERSON_GROUP_TEXT = "Группа"
 PERSON_BIRTH_DATE_TEXT = "Дата рождения"
@@ -557,12 +555,11 @@ ERROR_NO_DOCUMENT = "Нет студенческого билета"
 ERROR_BAD_BIRTH_DATE = "Неверная дата рождения"
 ERROR_BAD_ISSUE_DATE = "Неверная дата выдачи"
 ERROR_BAD_GROUP_FORMAT = "Неверный формат группы"
-ERROR_BAD_GROUP_PREFIX = "Неизвестное направление группы"
 ERROR_BAD_EDUCATION_FORM = "Неверная форма обучения"
 ERROR_BAD_EDUCATION_LEVEL = "Неверный уровень обучения"
 ERROR_BAD_INSTITUTE = "Неизвестный институт"
-ERROR_NOT_UNIQUE_PASS = "Требуется спецпропуск"
-ERROR_IMPOSTER = "Чужой спецпропуск"
+ERROR_NOT_UNIQUE_PASS = "Требуется удостоверение преподавателя"
+ERROR_IMPOSTER = "Чужое удостоверение"
 
 MESSAGE_NO_CURRENT_PERSON = "Нельзя принять решение: нет текущего посетителя"
 MESSAGE_GAME_ALREADY_OVER = "Игра окончена"
@@ -570,9 +567,9 @@ MESSAGE_DISMISSED = "Долг слишком большой: игрока уво
 MESSAGE_UNKNOWN_DECISION = "Неизвестное решение игрока: {decision}"
 
 PERSON_RECT_X = 850
-PERSON_RECT_Y = 205
+PERSON_RECT_Y = 220
 PERSON_RECT_WIDTH = 260
-PERSON_RECT_HEIGHT = 520
+PERSON_RECT_HEIGHT = 687
 PERSON_COLOR = (0, 0, 0)
 VIP_PERSON_COLOR = (218, 165, 32)
 
@@ -626,7 +623,7 @@ SETTINGS_ENCODING = "utf-8"
 SAVE_MONEY = "money"
 SAVE_ROUND_NUMBER = "round_number"
 SAVE_DAY_NUMBER = "day_number"
-SAVE_DAY_ORDER = "day_order"
+
 SAVE_DAY_PLAN = "day_plan"
 SAVE_DAY_PLAN_INDEX = "day_plan_index"
 SAVE_CURRENT_PERSON = "current_person"
@@ -711,6 +708,7 @@ STUDENT_CARD_PANEL_HEIGHT = 520
 STUDENT_CARD_PANEL_Y = 110
 STUDENT_CARD_PANEL_PADDING = 34
 STUDENT_CARD_LINE_GAP = 10
+INSTRUCTION_BG_PATH = "assets/images/instruction_bg.png"
 ALLOW_BUTTON_PATH = "assets/images/btn_allow.png"
 ALLOW_BUTTON_PRESSED_PATH = "assets/images/btn_allow_pressed.png"
 DENY_BUTTON_PATH = "assets/images/btn_deny.png"
@@ -737,13 +735,6 @@ DAY_PLAN_POPULATION_SIZE = 50
 DAY_PLAN_GENERATIONS = 100
 DAY_PLAN_MUTATION_CHANCE = 0.1
 
-DAY_ORDER_START = "start"
-DAY_ORDER_ERROR = "error"
-DAY_ORDER_TRANSITIONS = {
-    "start": {"start": 0.3, "error": 0.7},
-    "error": {"start": 0.8, "error": 0.2},
-}
-DAY_ORDER_FOCUS_CHANCE = 0.5
 
 INSTITUTE_GROUP_PREFIXES = {
     "ИнЭУ": ("ЭК", "МТ"),
@@ -780,7 +771,7 @@ RESULT_CORRECT_COLOR = (60, 220, 90)
 RESULT_MISTAKE_COLOR = (230, 70, 70)
 INSTRUCTION_PANEL_COLOR = (28, 28, 28)
 INSTRUCTION_BORDER_COLOR = (120, 120, 120)
-INSTRUCTION_TEXT_COLOR = (235, 235, 235)
+INSTRUCTION_TEXT_COLOR = (255, 255, 255)
 STUDENT_CARD_COLOR = (0, 0, 0)
 STUDENT_CARD_PANEL_COLOR = (245, 245, 240)
 STUDENT_CARD_PANEL_BORDER_COLOR = (20, 20, 20)
@@ -791,46 +782,38 @@ MIN_ISSUE_YEAR = 2024
 MAX_ISSUE_YEAR = 2024
 
 INSTRUCTION_DAY = "День {day}. Сегодняшние правила:"
-INSTRUCTION_DAY_ORDER = "Особое распоряжение: {day_order}"
+
 INSTRUCTIONS_BY_DAY = {
     1: [
         "ПРАВИЛА ПРОПУСКА:",
-        "- Обязателен студенческий билет.",
+        "- Обязателен студенческий билет (для преподавателей - удостоверение).",
         "- Год рождения посетителя не позднее {max_year}.",
         "",
         "ИНСТРУКЦИЯ:",
-        "Нажмите печать (✓), если всё верно.",
-        "Нажмите красный круг (X), если есть ошибка или билета нет."
+        "Нажмите зеленую кнопку чтобы пропустить",
+        "и красную в ином случае."
     ],
     2: [
         "ПРАВИЛА ПРОПУСКА:",
-        "- Обязателен студенческий билет (для VIP - спецпропуск).",
+        "- Обязателен студенческий билет (для преподавателей - удостоверение преподавателя).",
         "- Год рождения не позднее {max_year}.",
-        "- Дата выдачи билета: только 01.09.",
-        "- Возраст при выдаче билета: 17 или 18 лет.",
+        "- Дата выдачи строго 01.09.2024.",
         "",
         "ВНИМАНИЕ:",
-        "Пропускайте VIP-персон только со спецпропуском!"
+        "Пропускайте преподавателей только с удостоверением!"
     ],
     3: [
         "ПРАВИЛА ПРОПУСКА:",
-        "- Студенческий билет (для VIP - спецпропуск).",
+        "- Студенческий билет (для преподавателей - удостоверение преподавателя).",
         "- Год рождения не позднее {max_year}.",
-        "- Дата выдачи: только 01.09, возраст 17-18 лет.",
-        "- Группа: формат АА-123456.",
-        "- Первые буквы группы зависят от института.",
-        "",
-        "СПРАВОЧНИК КОДОВ ГРУПП:",
-        "{group_rules}"
+        "- Дата выдачи строго 01.09.2024.",
+        "- Группа: формат АА-123456."
     ],
     4: [
         "ПРАВИЛА ПРОПУСКА (ДЕНЬ 4):",
         "- Все правила предыдущего дня сохраняются.",
         "- Форма обучения: {forms}.",
-        "- Уровень обучения: {levels}.",
-        "",
-        "СПРАВОЧНИК КОДОВ ГРУПП:",
-        "{group_rules}"
+        "- Уровень обучения: {levels}."
     ],
     5: [
         "ПРАВИЛА ПРОПУСКА (ВСЕ ПРОВЕРКИ АКТИВНЫ):",
@@ -838,9 +821,6 @@ INSTRUCTIONS_BY_DAY = {
         "- Институт должен быть только в списке разрешенных.",
         "",
         "РАЗРЕШЕННЫЕ ИНСТИТУТЫ:",
-        "{institutes}",
-        "",
-        "СПРАВОЧНИК КОДОВ ГРУПП:",
-        "{group_rules}"
+        "{institutes}"
     ]
 }

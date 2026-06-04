@@ -39,6 +39,19 @@ class Screen:
         deny_pressed_img = pygame.image.load(config.DENY_BUTTON_PRESSED_PATH).convert_alpha()
         self.deny_button_pressed_image = pygame.transform.scale(deny_pressed_img, (config.DENY_BUTTON_SIZE, config.DENY_BUTTON_SIZE))
 
+        self.person_images = {}
+        self.walk_frames = {}
+        
+        for person_id in ["person_1", "person_2"]:
+            person_img = pygame.image.load(f"assets/images/{person_id}/straight.png").convert_alpha()
+            self.person_images[person_id] = pygame.transform.scale(person_img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT))
+
+            frames = []
+            for name in ["left.png", "left2.png", "left.png", "left3.png"]:
+                img = pygame.image.load(f"assets/images/{person_id}/{name}").convert_alpha()
+                frames.append(pygame.transform.scale(img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT)))
+            self.walk_frames[person_id] = frames
+
         self.person_rect = pygame.Rect(
             config.PERSON_RECT_X,
             config.PERSON_RECT_Y,
@@ -60,6 +73,12 @@ class Screen:
 
         student_card_img = pygame.image.load(config.STUDENT_CARD_PATH).convert_alpha()
         self.student_card_image = pygame.transform.scale(student_card_img, (config.STUDENT_CARD_WIDTH, config.STUDENT_CARD_HEIGHT))
+        
+        try:
+            instruction_bg_img = pygame.image.load(config.INSTRUCTION_BG_PATH).convert_alpha()
+            self.instruction_bg_image = pygame.transform.scale(instruction_bg_img, (config.INSTRUCTION_PANEL_WIDTH, config.INSTRUCTION_PANEL_HEIGHT))
+        except Exception:
+            self.instruction_bg_image = None
 
         self.allow_button_rect = pygame.Rect(
             config.ALLOW_BUTTON_X,
@@ -204,9 +223,10 @@ class Screen:
         student_card_on_table: bool = True,
         allow_pressed: bool = False,
         deny_pressed: bool = False,
+        visitor_state: str = "NONE",
     ) -> None:
         self.screen.fill(config.MENU_BACKGROUND_COLOR)
-        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed)
+        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed, visitor_state)
 
         scaled_scene = pygame.transform.scale(self.game_scene, self.game_rect.size)
         self.screen.blit(scaled_scene, self.game_rect)
@@ -230,18 +250,21 @@ class Screen:
         student_card_on_table: bool,
         allow_pressed: bool = False,
         deny_pressed: bool = False,
+        visitor_state: str = "NONE",
     ) -> None:
         self.game_scene.blit(self.background_image, (config.BACKGROUND_X, config.BACKGROUND_Y))
 
         if visitor_visible:
-            color = config.PERSON_COLOR
-            if person is not None and person.is_important:
-                color = config.VIP_PERSON_COLOR
-            pygame.draw.rect(
-                self.game_scene,
-                color,
-                self.get_person_rect(visitor_position),
-            )
+            person_id = "person_2" if person and person.is_important else "person_1"
+            person_rect = self.get_person_rect(visitor_position)
+            img = self.person_images[person_id]
+            if visitor_state in ("WALKING_IN", "WALKING_OUT") and visitor_position is not None:
+                frame_index = (-int(visitor_position[0]) // 120) % len(self.walk_frames[person_id])
+                img = self.walk_frames[person_id][frame_index]
+                # Add a small bobbing effect for walking
+                if frame_index % 2 != 0:
+                    person_rect.y -= 10
+            self.game_scene.blit(img, person_rect)
 
         self.game_scene.blit(self.table, (config.TABLE_X, config.TABLE_Y))
         self.draw_table_tools(allow_pressed, deny_pressed)
@@ -339,8 +362,11 @@ class Screen:
         panel = pygame.Rect(0, 0, config.INSTRUCTION_PANEL_WIDTH, config.INSTRUCTION_PANEL_HEIGHT)
         panel.center = (self.width // 2, self.height // 2)
 
-        pygame.draw.rect(self.screen, config.INSTRUCTION_PANEL_COLOR, panel)
-        pygame.draw.rect(self.screen, config.INSTRUCTION_BORDER_COLOR, panel, 2)
+        if self.instruction_bg_image:
+            self.screen.blit(self.instruction_bg_image, panel)
+        else:
+            pygame.draw.rect(self.screen, config.INSTRUCTION_PANEL_COLOR, panel)
+            pygame.draw.rect(self.screen, config.INSTRUCTION_BORDER_COLOR, panel, 2)
 
         title = self.button_font.render(config.INSTRUCTION_TITLE_TEXT, True, config.INSTRUCTION_TEXT_COLOR)
         title_rect = title.get_rect(center=(panel.centerx, panel.y + config.INSTRUCTION_PANEL_PADDING))

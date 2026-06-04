@@ -49,18 +49,6 @@ class PseudoRandomChance:
         return False
 
 
-class MarkovChain:
-    def __init__(self, transitions, start_state, random_source=None):
-        self.transitions = transitions
-        self.current_state = start_state
-        self.random = random_source or random.Random()
-
-    def next_state(self):
-        variants = self.transitions[self.current_state]
-        self.current_state = weighted_choice(variants, self.random)
-
-        return self.current_state
-
 
 def weighted_choice(variants, random_source):
     if isinstance(variants, dict):
@@ -252,7 +240,7 @@ class GameRules:
         self.dismissal_balance_limit = dismissal_balance_limit
         self.current_date = current_date or date.today()
 
-    def instruction_lines(self, day_number: int = 1, day_order: str = "") -> List[str]:
+    def instruction_lines(self, day_number: int = 1) -> List[str]:
         forms = ", ".join(self.valid_education_forms)
         levels = ", ".join(self.valid_education_levels)
         institutes = ", ".join(self.valid_institutes)
@@ -538,10 +526,6 @@ class PersonGenerator:
             document.issue_date = self._generate_bad_issue_date(document.birth_date)
         elif reason == config.BAD_GROUP_FORMAT:
             document.group = self.random.choice(config.BAD_GROUP_VARIANTS)
-        elif reason == config.BAD_GROUP_PREFIX_ERROR:
-            group_number = self.random.randint(config.MIN_GROUP_NUMBER, config.MAX_GROUP_NUMBER)
-            prefix = self._generate_wrong_group_prefix(document.institute)
-            document.group = f"{prefix}{config.GROUP_SEPARATOR}{group_number}"
         elif reason == config.BAD_EDUCATION_FORM:
             document.education_form = self.random.choice(config.BAD_EDUCATION_FORMS)
         elif reason == config.BAD_EDUCATION_LEVEL:
@@ -584,19 +568,17 @@ class PersonGenerator:
         return date(year, month, day)
 
     def _generate_valid_issue_date(self, birth_date: date) -> date:
-        issue_age = self.random.choice(config.VALID_ISSUE_AGES)
-        issue_year = birth_date.year + issue_age
-
+        issue_year = self.random.randint(config.MIN_ISSUE_YEAR, config.MAX_ISSUE_YEAR)
         return date(issue_year, config.ISSUE_DATE_MONTH, config.ISSUE_DATE_DAY)
 
     def _generate_bad_issue_date(self, birth_date: Optional[date]) -> date:
-        if birth_date is None:
-            birth_date = self._generate_valid_birth_date()
-            
-        day, month = self.random.choice(getattr(config, "BAD_ISSUE_DATE_VARIANTS", [(1, 9), (2, 9)]))
+        day, month = config.ISSUE_DATE_DAY, config.ISSUE_DATE_MONTH
+        issue_year = self.random.randint(config.MIN_ISSUE_YEAR, config.MAX_ISSUE_YEAR)
         
-        issue_age = self.random.choice(getattr(config, "BAD_ISSUE_AGES", [15, 16, 19, 20]))
-        issue_year = birth_date.year + issue_age
+        if self.random.random() < 0.5:
+            day, month = self.random.choice(getattr(config, "BAD_ISSUE_DATE_VARIANTS", [(1, 9), (2, 9)]))
+        else:
+            issue_year = self.random.randint(2018, 2023)
 
         return date(issue_year, month, day)
 
@@ -606,19 +588,6 @@ class PersonGenerator:
         group_number = self.random.randint(config.MIN_GROUP_NUMBER, config.MAX_GROUP_NUMBER)
 
         return f"{prefix}{config.GROUP_SEPARATOR}{group_number}"
-
-    def _generate_wrong_group_prefix(self, institute: str) -> str:
-        valid_prefixes = self.rules.institute_group_prefixes.get(institute, ())
-        bad_prefixes = []
-
-        for prefix in self.rules.valid_group_prefixes:
-            if prefix not in valid_prefixes:
-                bad_prefixes.append(prefix)
-
-        if len(bad_prefixes) == 0:
-            return config.BAD_GROUP_PREFIX
-
-        return self.random.choice(bad_prefixes)
 
 
 class Checker:
@@ -656,15 +625,6 @@ class Checker:
         if not re.match(self.rules.group_pattern, group):
             errors.append(config.ERROR_BAD_GROUP_FORMAT)
             return
-
-        prefix = group.split(config.GROUP_SEPARATOR, config.GROUP_SPLIT_MAX_COUNT)[0]
-        institute = person.document.institute
-
-        if institute not in self.rules.institute_group_prefixes:
-            return
-
-        if prefix not in self.rules.institute_group_prefixes[institute]:
-            errors.append(config.ERROR_BAD_GROUP_PREFIX)
 
     def check_education_form(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
@@ -706,6 +666,8 @@ class Checker:
         if issue_date.day != config.ISSUE_DATE_DAY:
             return False
         if issue_date.month != config.ISSUE_DATE_MONTH:
+            return False
+        if issue_date.year < config.MIN_ISSUE_YEAR or issue_date.year > config.MAX_ISSUE_YEAR:
             return False
 
         return True
@@ -760,7 +722,6 @@ class GameModel:
         economy: Optional[Economy] = None,
         seed: Optional[int] = None,
         day_planner: Optional[GeneticDayPlanner] = None,
-        day_order_chain: Optional[MarkovChain] = None,
     ):
         self.rules = rules or GameRules()
         self.random = random.Random(seed)
@@ -780,14 +741,8 @@ class GameModel:
             config.DAY_PLAN_MUTATION_CHANCE,
             self.random,
         )
-        self.day_order_chain = day_order_chain or MarkovChain(
-            config.DAY_ORDER_TRANSITIONS,
-            config.DAY_ORDER_START,
-            self.random,
-        )
         self.round_number = 0
         self.day_number = 0
-        self.day_order = config.DAY_ORDER_START
         self.day_plan = []
         self.day_plan_index = 0
         self.current_person: Optional[Person] = None
@@ -800,11 +755,6 @@ class GameModel:
 
     def start_new_day(self) -> None:
         self.day_number += 1
-
-        if self.day_number == 1:
-            self.day_order = config.DAY_ORDER_START
-        else:
-            self.day_order = self.day_order_chain.next_state()
 
         self.day_plan = self.day_planner.make_plan(self.day_number)
         self.day_plan_index = 0
@@ -834,12 +784,6 @@ class GameModel:
             return None
 
         active_reasons = get_error_reasons_for_checks(active_checks)
-        focused_error = getattr(config, "DAY_ORDER_ERRORS", {}).get(self.day_order)
-        if (
-            focused_error in active_reasons
-            and self.random.random() < config.DAY_ORDER_FOCUS_CHANCE
-        ):
-            return focused_error
 
         return self.random.choice(active_reasons)
 
@@ -887,7 +831,7 @@ class GameModel:
         return result
 
     def get_instruction(self) -> List[str]:
-        return self.rules.instruction_lines(self.day_number, self.day_order)
+        return self.rules.instruction_lines(self.day_number)
 
     def get_active_checks(self) -> Tuple[str, ...]:
         return get_active_checks(self.day_number)
@@ -916,7 +860,6 @@ class GameModel:
             config.SAVE_MONEY: self.economy.money,
             config.SAVE_ROUND_NUMBER: self.round_number,
             config.SAVE_DAY_NUMBER: self.day_number,
-            config.SAVE_DAY_ORDER: self.day_order,
             config.SAVE_DAY_PLAN: self.day_plan,
             config.SAVE_DAY_PLAN_INDEX: self.day_plan_index,
             config.SAVE_CURRENT_PERSON: current_person_data,
@@ -934,15 +877,11 @@ class GameModel:
         game.economy.money = int(data.get(config.SAVE_MONEY, config.DEFAULT_MONEY))
         game.round_number = int(data.get(config.SAVE_ROUND_NUMBER, 0))
         game.day_number = int(data.get(config.SAVE_DAY_NUMBER, 1))
-        game.day_order = str(data.get(config.SAVE_DAY_ORDER, config.DAY_ORDER_START))
         game.day_plan = GameModel.fix_day_plan(data.get(config.SAVE_DAY_PLAN))
         game.day_plan_index = int(data.get(config.SAVE_DAY_PLAN_INDEX, 0))
         game.current_person = Person.from_save_data(data.get(config.SAVE_CURRENT_PERSON))
         game.game_over = bool(data.get(config.SAVE_GAME_OVER, False))
         game.game_over_reason = str(data.get(config.SAVE_GAME_OVER_REASON, ""))
-
-        if game.day_order in config.DAY_ORDER_TRANSITIONS:
-            game.day_order_chain.current_state = game.day_order
 
         if len(game.day_plan) == 0:
             game.day_plan = game.day_planner.make_plan(game.day_number)

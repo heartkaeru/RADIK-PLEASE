@@ -190,8 +190,6 @@ class Screen:
         self.draw_button(self.menu_buttons[config.BUTTON_SETTINGS], config.MENU_SETTINGS_TEXT)
         self.draw_button(self.menu_buttons[config.BUTTON_EXIT], config.MENU_EXIT_TEXT)
 
-        self.update_screen()
-
     def draw_settings(
         self,
         music_enabled: bool,
@@ -220,8 +218,6 @@ class Screen:
             sound_volume,
         )
         self.draw_button(self.settings_buttons[config.BUTTON_BACK], config.MENU_BACK_TEXT)
-
-        self.update_screen()
 
     def draw_game(
         self,
@@ -256,8 +252,6 @@ class Screen:
 
         if instruction_open:
             self.draw_instruction(instruction_lines)
-
-        self.update_screen()
 
     def draw_game_scene(
         self,
@@ -444,6 +438,83 @@ class Screen:
         knob = pygame.Rect(0, 0, config.SLIDER_KNOB_WIDTH, config.SLIDER_KNOB_HEIGHT)
         knob.center = (knob_x, rect.centery)
         pygame.draw.rect(self.screen, config.SLIDER_KNOB_COLOR, knob)
+
+    def draw_day_summary(
+        self,
+        day: int,
+        processed: int,
+        correct: int,
+        mistakes: int,
+        earned: int,
+        lost: int,
+    ) -> None:
+        self.draw_menu_background()
+        
+        self.draw_title(config.DAY_SUMMARY_TITLE.format(day=day))
+        
+        start_y = config.TITLE_Y + 120
+        gap_y = 60
+        
+        lines = [
+            config.DAY_SUMMARY_PROCESSED.format(processed=processed),
+            config.DAY_SUMMARY_CORRECT.format(correct=correct),
+            config.DAY_SUMMARY_MISTAKES.format(mistakes=mistakes),
+            config.DAY_SUMMARY_MONEY_EARNED.format(earned=earned),
+            config.DAY_SUMMARY_MONEY_LOST.format(lost=lost),
+            config.DAY_SUMMARY_TOTAL.format(total=earned - lost),
+        ]
+        
+        for i, text in enumerate(lines):
+            label = self.myfont.render(text, True, config.MENU_TEXT_COLOR)
+            label_rect = label.get_rect(center=(self.width // 2, start_y + i * gap_y))
+            self.screen.blit(label, label_rect)
+            
+        advice = self.myfont.render(config.DAY_SUMMARY_ADVICE, True, config.BUTTON_DISABLED_TEXT_COLOR)
+        advice_rect = advice.get_rect(center=(self.width // 2, start_y + len(lines) * gap_y + 40))
+        self.screen.blit(advice, advice_rect)
+        
+        if config.BUTTON_NEXT_DAY not in self.menu_buttons:
+            self.menu_buttons[config.BUTTON_NEXT_DAY] = pygame.Rect(
+                self.width // 2 - config.MENU_BUTTON_WIDTH // 2,
+                self.height - 150,
+                config.MENU_BUTTON_WIDTH,
+                config.MENU_BUTTON_HEIGHT
+            )
+            
+        self.draw_button(self.menu_buttons[config.BUTTON_NEXT_DAY], config.DAY_SUMMARY_NEXT_TEXT)
+
+    def draw_tutorial(self) -> None:
+        self.draw_menu_background()
+        self.draw_title(config.TUTORIAL_TITLE)
+        
+        start_y = config.TITLE_Y + 120
+        gap_y = 60
+        
+        for i, text in enumerate(config.TUTORIAL_TEXT):
+            label = self.myfont.render(text, True, config.MENU_TEXT_COLOR)
+            label_rect = label.get_rect(center=(self.width // 2, start_y + i * gap_y))
+            self.screen.blit(label, label_rect)
+            
+        if config.BUTTON_TUTORIAL_CONTINUE not in self.menu_buttons:
+            self.menu_buttons[config.BUTTON_TUTORIAL_CONTINUE] = pygame.Rect(
+                self.width // 2 - config.MENU_BUTTON_WIDTH // 2,
+                self.height - 150,
+                config.MENU_BUTTON_WIDTH,
+                config.MENU_BUTTON_HEIGHT
+            )
+            
+        self.draw_button(self.menu_buttons[config.BUTTON_TUTORIAL_CONTINUE], config.TUTORIAL_CONTINUE_TEXT)
+
+    def draw_fade(self, alpha: float) -> None:
+        if alpha <= 0:
+            return
+        if alpha > 255:
+            alpha = 255
+            
+        fade_surface = pygame.Surface((self.width, self.height))
+        fade_surface.fill((0, 0, 0))
+        fade_surface.set_alpha(int(alpha))
+        self.screen.blit(fade_surface, (0, 0))
 
     def get_setting_text(self, template: str, enabled: bool) -> str:
         if enabled:

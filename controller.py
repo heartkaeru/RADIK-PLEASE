@@ -41,6 +41,8 @@ class GameController:
         self.leaving_person = None
         self.allow_pressed = False
         self.deny_pressed = False
+        self.fade_alpha = 0.0
+        self.fade_state = "NONE"
 
         if not self.music_enabled:
             pygame.mixer.music.pause()
@@ -88,6 +90,22 @@ class GameController:
                 deny_pressed=self.deny_pressed,
                 visitor_state=self.visitor_state,
             )
+        elif self.screen_name == config.SCREEN_DAY_SUMMARY:
+            self.view.draw_day_summary(
+                self.game_model.day_number,
+                self.game_model.daily_processed,
+                self.game_model.daily_correct,
+                self.game_model.daily_mistakes,
+                self.game_model.daily_money_earned,
+                self.game_model.daily_money_lost,
+            )
+        elif self.screen_name == config.SCREEN_TUTORIAL:
+            self.view.draw_tutorial()
+
+        if self.fade_alpha > 0:
+            self.view.draw_fade(self.fade_alpha)
+            
+        self.view.update_screen()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -119,6 +137,28 @@ class GameController:
             self.handle_settings_click(mouse_pos)
         elif self.screen_name == config.SCREEN_GAME:
             self.handle_game_click(mouse_pos)
+        elif self.screen_name == config.SCREEN_DAY_SUMMARY:
+            self.handle_day_summary_click(mouse_pos)
+        elif self.screen_name == config.SCREEN_TUTORIAL:
+            self.handle_tutorial_click(mouse_pos)
+
+    def handle_day_summary_click(self, mouse_pos):
+        if config.BUTTON_NEXT_DAY in self.view.menu_buttons:
+            if self.view.menu_buttons[config.BUTTON_NEXT_DAY].collidepoint(mouse_pos):
+                self.game_model.start_new_day()
+                self.game_model.next_round()
+                self.screen_name = config.SCREEN_GAME
+                self.fade_state = "FADE_IN"
+                self.fade_alpha = 255
+                self.visitor_visible = True
+                self.visitor_state = "WALKING_IN"
+                self.visitor_x = config.DEFAULT_WINDOW_WIDTH
+                self.save_game()
+
+    def handle_tutorial_click(self, mouse_pos):
+        if config.BUTTON_TUTORIAL_CONTINUE in self.view.menu_buttons:
+            if self.view.menu_buttons[config.BUTTON_TUTORIAL_CONTINUE].collidepoint(mouse_pos):
+                self.screen_name = config.SCREEN_GAME
 
     def handle_menu_click(self, mouse_pos):
         buttons = self.view.menu_buttons
@@ -198,20 +238,41 @@ class GameController:
         self.visitor_x = config.DEFAULT_WINDOW_WIDTH
         self.result_text = ""
         self.next_visitor_time = None
-        self.screen_name = config.SCREEN_GAME
+        self.screen_name = config.SCREEN_TUTORIAL
 
     def continue_game(self):
         if self.game_model is None:
             self.load_game()
 
         self.game_started = True
-        self.visitor_visible = True
-        self.visitor_state = "WALKING_IN"
-        self.visitor_x = config.DEFAULT_WINDOW_WIDTH
-        self.student_card_open = False
-        self.screen_name = config.SCREEN_GAME
+        
+        if self.game_model.day_finished:
+            self.screen_name = config.SCREEN_DAY_SUMMARY
+        else:
+            self.visitor_visible = True
+            self.visitor_state = "WALKING_IN"
+            self.visitor_x = config.DEFAULT_WINDOW_WIDTH
+            self.student_card_open = False
+            self.screen_name = config.SCREEN_GAME
 
     def update_game_state(self, dt):
+        if self.screen_name == config.SCREEN_TUTORIAL:
+            return
+
+        if self.fade_state == "FADE_OUT":
+            self.fade_alpha += config.FADE_SPEED * dt
+            if self.fade_alpha >= 255:
+                self.fade_alpha = 0
+                self.fade_state = "NONE"
+                self.screen_name = config.SCREEN_DAY_SUMMARY
+            return
+        elif self.fade_state == "FADE_IN":
+            self.fade_alpha -= config.FADE_SPEED * dt
+            if self.fade_alpha <= 0:
+                self.fade_alpha = 0
+                self.fade_state = "NONE"
+            return
+            
         if self.visitor_state == "WALKING_IN":
             self.visitor_x -= 1000 * dt
             if self.visitor_x <= config.PERSON_RECT_X:
@@ -223,7 +284,11 @@ class GameController:
                 self.visitor_state = "NONE"
                 self.visitor_visible = False
                 if self.game_model and not self.game_model.game_over:
-                    self.next_visitor_time = pygame.time.get_ticks() + 200
+                    if self.game_model.day_finished:
+                        self.fade_state = "FADE_OUT"
+                        self.next_visitor_time = None
+                    else:
+                        self.next_visitor_time = pygame.time.get_ticks() + 200
 
         if self.next_visitor_time is None:
             return

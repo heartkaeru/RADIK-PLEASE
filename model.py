@@ -800,6 +800,12 @@ class GameModel:
         self.last_result: Optional[RoundResult] = None
         self.game_over = False
         self.game_over_reason = ""
+        self.day_finished = False
+        self.daily_processed = 0
+        self.daily_correct = 0
+        self.daily_mistakes = 0
+        self.daily_money_earned = 0
+        self.daily_money_lost = 0
 
         self.start_new_day()
         self.next_round()
@@ -809,13 +815,21 @@ class GameModel:
 
         self.day_plan = self.day_planner.make_plan(self.day_number)
         self.day_plan_index = 0
+        self.day_finished = False
+        self.daily_processed = 0
+        self.daily_correct = 0
+        self.daily_mistakes = 0
+        self.daily_money_earned = 0
+        self.daily_money_lost = 0
 
     def next_round(self) -> Optional[Person]:
         if self.game_over:
             return None
 
         if self.day_plan_index >= len(self.day_plan):
-            self.start_new_day()
+            self.day_finished = True
+            self.current_person = None
+            return None
 
         should_be_invalid = self.day_plan[self.day_plan_index]
         active_checks = self.get_active_checks()
@@ -860,6 +874,16 @@ class GameModel:
         is_correct = player_decision == correct_decision
         money_delta = self.economy.apply_result(is_correct)
 
+        self.daily_processed += 1
+        if is_correct:
+            self.daily_correct += 1
+            if money_delta > 0:
+                self.daily_money_earned += money_delta
+        else:
+            self.daily_mistakes += 1
+            if money_delta < 0:
+                self.daily_money_lost -= money_delta
+
         if self.economy.money <= self.rules.dismissal_balance_limit:
             self.game_over = True
             self.game_over_reason = config.MESSAGE_DISMISSED
@@ -876,7 +900,7 @@ class GameModel:
         )
         self.last_result = result
 
-        if not self.game_over:
+        if not self.game_over and not self.day_finished:
             self.next_round()
 
         return result
@@ -916,6 +940,12 @@ class GameModel:
             config.SAVE_CURRENT_PERSON: current_person_data,
             config.SAVE_GAME_OVER: self.game_over,
             config.SAVE_GAME_OVER_REASON: self.game_over_reason,
+            config.SAVE_DAY_FINISHED: self.day_finished,
+            config.SAVE_DAILY_PROCESSED: self.daily_processed,
+            config.SAVE_DAILY_CORRECT: self.daily_correct,
+            config.SAVE_DAILY_MISTAKES: self.daily_mistakes,
+            config.SAVE_DAILY_MONEY_EARNED: self.daily_money_earned,
+            config.SAVE_DAILY_MONEY_LOST: self.daily_money_lost,
         }
 
     @staticmethod
@@ -933,12 +963,18 @@ class GameModel:
         game.current_person = Person.from_save_data(data.get(config.SAVE_CURRENT_PERSON))
         game.game_over = bool(data.get(config.SAVE_GAME_OVER, False))
         game.game_over_reason = str(data.get(config.SAVE_GAME_OVER_REASON, ""))
+        game.day_finished = bool(data.get(config.SAVE_DAY_FINISHED, False))
+        game.daily_processed = int(data.get(config.SAVE_DAILY_PROCESSED, 0))
+        game.daily_correct = int(data.get(config.SAVE_DAILY_CORRECT, 0))
+        game.daily_mistakes = int(data.get(config.SAVE_DAILY_MISTAKES, 0))
+        game.daily_money_earned = int(data.get(config.SAVE_DAILY_MONEY_EARNED, 0))
+        game.daily_money_lost = int(data.get(config.SAVE_DAILY_MONEY_LOST, 0))
 
         if len(game.day_plan) == 0:
             game.day_plan = game.day_planner.make_plan(game.day_number)
             game.day_plan_index = 0
 
-        if game.current_person is None and not game.game_over:
+        if game.current_person is None and not game.game_over and not game.day_finished:
             game.next_round()
 
         return game

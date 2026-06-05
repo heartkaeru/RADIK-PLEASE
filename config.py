@@ -616,6 +616,8 @@ DEFAULT_WINDOW_MODE_NUMBER = 0
 SCREEN_MENU = "menu"
 SCREEN_SETTINGS = "settings"
 SCREEN_GAME = "game"
+SCREEN_DAY_SUMMARY = "day_summary"
+SCREEN_TUTORIAL = "tutorial"
 
 BUTTON_START = "start"
 BUTTON_CONTINUE = "continue"
@@ -625,6 +627,8 @@ BUTTON_MUSIC = "music"
 BUTTON_SOUND = "sound"
 BUTTON_WINDOW_SIZE = "window_size"
 BUTTON_BACK = "back"
+BUTTON_NEXT_DAY = "next_day"
+BUTTON_TUTORIAL_CONTINUE = "tutorial_continue"
 SLIDER_MUSIC_VOLUME = "music_volume"
 SLIDER_SOUND_VOLUME = "sound_volume"
 
@@ -634,6 +638,12 @@ SETTINGS_ENCODING = "utf-8"
 SAVE_MONEY = "money"
 SAVE_ROUND_NUMBER = "round_number"
 SAVE_DAY_NUMBER = "day_number"
+SAVE_DAY_FINISHED = "day_finished"
+SAVE_DAILY_PROCESSED = "daily_processed"
+SAVE_DAILY_CORRECT = "daily_correct"
+SAVE_DAILY_MISTAKES = "daily_mistakes"
+SAVE_DAILY_MONEY_EARNED = "daily_money_earned"
+SAVE_DAILY_MONEY_LOST = "daily_money_lost"
 
 SAVE_DAY_PLAN = "day_plan"
 SAVE_DAY_PLAN_INDEX = "day_plan_index"
@@ -678,6 +688,23 @@ TIME_TEXT = "{time}"
 RESULT_CORRECT_TEXT = "Верно: {money_delta} ₽"
 RESULT_MISTAKE_TEXT = "Ошибка: {money_delta} ₽"
 INSTRUCTION_TITLE_TEXT = "Инструкция"
+DAY_SUMMARY_TITLE = "Итоги дня {day}"
+DAY_SUMMARY_PROCESSED = "Обработано посетителей: {processed}"
+DAY_SUMMARY_CORRECT = "Верных решений: {correct}"
+DAY_SUMMARY_MISTAKES = "Ошибок: {mistakes}"
+DAY_SUMMARY_MONEY_EARNED = "Заработано: {earned} ₽"
+DAY_SUMMARY_MONEY_LOST = "Штрафы: {lost} ₽"
+DAY_SUMMARY_TOTAL = "Итого за день: {total} ₽"
+DAY_SUMMARY_ADVICE = "Совет: перед началом смены ознакомьтесь с новыми правилами в инструкции."
+DAY_SUMMARY_NEXT_TEXT = "Начать следующий день"
+TUTORIAL_TITLE = "Как играть"
+TUTORIAL_TEXT = [
+    "Вам предстоит проверять документы посетителей.",
+    "В начале каждого дня обязательно ознакомьтесь",
+    "с инструкцией на столе, чтобы узнать",
+    "актуальные правила пропуска."
+]
+TUTORIAL_CONTINUE_TEXT = "Понятно"
 
 MENU_BUTTON_WIDTH = 520
 MENU_BUTTON_HEIGHT = 60
@@ -744,6 +771,7 @@ DAY_MAX_BAD_VISITORS = 3
 DAY_PLAN_POPULATION_SIZE = 50
 DAY_PLAN_GENERATIONS = 100
 DAY_PLAN_MUTATION_CHANCE = 0.1
+FADE_SPEED = 255.0 * 1.5
 
 
 INSTITUTE_GROUP_PREFIXES = {

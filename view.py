@@ -42,12 +42,12 @@ class Screen:
         self.person_images = {}
         self.walk_frames = {}
         
-        for person_id in ["person_1", "person_2"]:
+        for person_id in ["male", "female", "professor"]:
             person_img = pygame.image.load(f"assets/images/{person_id}/straight.png").convert_alpha()
             self.person_images[person_id] = pygame.transform.scale(person_img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT))
 
             frames = []
-            for name in ["left.png", "left2.png", "left.png", "left3.png"]:
+            for name in ["left.png", "left2.png"]:
                 img = pygame.image.load(f"assets/images/{person_id}/{name}").convert_alpha()
                 frames.append(pygame.transform.scale(img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT)))
             self.walk_frames[person_id] = frames
@@ -127,12 +127,8 @@ class Screen:
         self.game_rect = pygame.Rect(0, 0, self.width, self.height)
 
     def update_buttons(self) -> None:
-        self.menu_buttons = {
-            config.BUTTON_START: self.create_button(0),
-            config.BUTTON_CONTINUE: self.create_button(1),
-            config.BUTTON_SETTINGS: self.create_button(2),
-            config.BUTTON_EXIT: self.create_button(3),
-        }
+        self.last_has_save = None
+        self.update_menu_buttons(True)
         self.settings_buttons = {
             config.BUTTON_MUSIC: self.create_settings_button(0),
             config.BUTTON_SOUND: self.create_settings_button(2),
@@ -143,6 +139,24 @@ class Screen:
             config.SLIDER_MUSIC_VOLUME: self.create_settings_slider(1),
             config.SLIDER_SOUND_VOLUME: self.create_settings_slider(3),
         }
+
+    def update_menu_buttons(self, has_save: bool) -> None:
+        if getattr(self, "last_has_save", None) == has_save:
+            return
+        self.last_has_save = has_save
+
+        self.menu_buttons = {
+            config.BUTTON_START: self.create_button(0),
+        }
+        
+        button_idx = 1
+        if has_save:
+            self.menu_buttons[config.BUTTON_CONTINUE] = self.create_button(button_idx)
+            button_idx += 1
+            
+        self.menu_buttons[config.BUTTON_SETTINGS] = self.create_button(button_idx)
+        button_idx += 1
+        self.menu_buttons[config.BUTTON_EXIT] = self.create_button(button_idx)
 
     def create_button(self, number: int) -> pygame.Rect:
         x = self.width // 2 - config.MENU_BUTTON_WIDTH // 2
@@ -161,15 +175,18 @@ class Screen:
         return pygame.Rect(x, y, config.SLIDER_TRACK_WIDTH, config.SLIDER_TRACK_HEIGHT)
 
     def draw_menu(self, has_save: bool) -> None:
+        self.update_menu_buttons(has_save)
+        
         self.draw_menu_background()
         self.draw_title(config.MENU_TITLE_TEXT)
 
         self.draw_button(self.menu_buttons[config.BUTTON_START], config.MENU_START_TEXT)
-        self.draw_button(
-            self.menu_buttons[config.BUTTON_CONTINUE],
-            config.MENU_CONTINUE_TEXT,
-            has_save,
-        )
+        if config.BUTTON_CONTINUE in self.menu_buttons:
+            self.draw_button(
+                self.menu_buttons[config.BUTTON_CONTINUE],
+                config.MENU_CONTINUE_TEXT,
+                True,
+            )
         self.draw_button(self.menu_buttons[config.BUTTON_SETTINGS], config.MENU_SETTINGS_TEXT)
         self.draw_button(self.menu_buttons[config.BUTTON_EXIT], config.MENU_EXIT_TEXT)
 
@@ -255,7 +272,12 @@ class Screen:
         self.game_scene.blit(self.background_image, (config.BACKGROUND_X, config.BACKGROUND_Y))
 
         if visitor_visible:
-            person_id = "person_2" if person and person.is_important else "person_1"
+            person_id = "male"
+            if person:
+                if person.is_important:
+                    person_id = "professor"
+                elif person.gender == config.GENDER_FEMALE:
+                    person_id = "female"
             person_rect = self.get_person_rect(visitor_position)
             img = self.person_images[person_id]
             if visitor_state in ("WALKING_IN", "WALKING_OUT") and visitor_position is not None:

@@ -92,6 +92,7 @@ class GameController:
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                self.save_game()
                 self.save_settings()
                 self.view.running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -124,11 +125,12 @@ class GameController:
 
         if buttons[config.BUTTON_START].collidepoint(mouse_pos):
             self.start_game()
-        elif buttons[config.BUTTON_CONTINUE].collidepoint(mouse_pos) and self.has_save():
+        elif config.BUTTON_CONTINUE in buttons and buttons[config.BUTTON_CONTINUE].collidepoint(mouse_pos) and self.has_save():
             self.continue_game()
         elif buttons[config.BUTTON_SETTINGS].collidepoint(mouse_pos):
             self.screen_name = config.SCREEN_SETTINGS
         elif buttons[config.BUTTON_EXIT].collidepoint(mouse_pos):
+            self.save_game()
             self.save_settings()
             self.view.running = False
 
@@ -187,6 +189,7 @@ class GameController:
 
     def start_game(self):
         self.game_model = GameModel()
+        self.delete_save()
         self.game_started = True
         self.instruction_open = False
         self.student_card_open = False
@@ -199,7 +202,7 @@ class GameController:
 
     def continue_game(self):
         if self.game_model is None:
-            self.game_model = GameModel()
+            self.load_game()
 
         self.game_started = True
         self.visitor_visible = True
@@ -246,8 +249,10 @@ class GameController:
         if result.game_over:
             self.result_text = result.game_over_reason
             self.next_visitor_time = None
+            self.delete_save()
         else:
             self.next_visitor_time = None
+            self.save_game()
 
     def get_result_text(self, result):
         if result.is_correct:
@@ -286,6 +291,34 @@ class GameController:
 
     def has_save(self):
         return os.path.exists(config.SAVE_FILE)
+
+    def load_game(self):
+        if not self.has_save():
+            self.game_model = GameModel()
+            return
+        try:
+            with open(config.SAVE_FILE, "r", encoding="utf-8") as file:
+                data = json.load(file)
+            self.game_model = GameModel.from_save_data(data)
+        except Exception:
+            self.game_model = GameModel()
+
+    def save_game(self):
+        if self.game_model is None or self.game_model.game_over:
+            return
+        try:
+            data = self.game_model.to_save_data()
+            with open(config.SAVE_FILE, "w", encoding="utf-8", newline="\r\n") as file:
+                json.dump(data, file, ensure_ascii=False, indent=4)
+        except Exception:
+            pass
+
+    def delete_save(self):
+        if self.has_save():
+            try:
+                os.remove(config.SAVE_FILE)
+            except OSError:
+                pass
 
     def toggle_music(self):
         self.music_enabled = not self.music_enabled

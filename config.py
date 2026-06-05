@@ -459,10 +459,18 @@ BAD_INSTITUTES = (
     "Высшая школа как удобно",
     "Институт временного обучения",
     "Факультет неизвестных направлений",
-    "Академия удаленных коридоров",
     "Институт личного плана",
     "Факультет без расписания",
 )
+
+TEACHER_POSITIONS = ("Профессор", "Доцент", "Старший преподаватель", "Ассистент")
+BAD_TEACHER_POSITIONS = ("Директор", "Начальник", "Учитель", "Менеджер", "Охранник", "Дворник")
+
+TEACHER_DEGREES = ("Доктор наук", "Кандидат наук", "Без степени")
+BAD_TEACHER_DEGREES = ("Магистр магии", "Академик", "Доктор всея Руси", "Студент", "Бакалавр наук")
+
+TEACHER_DEPARTMENTS = ("Кафедра ПИ", "Кафедра ИС", "Кафедра БИ", "Кафедра ЭК", "Кафедра РИ", "Кафедра МТ")
+BAD_TEACHER_DEPARTMENTS = ("Кафедра магии", "Кафедра отдыха", "Отдел продаж", "Бухгалтерия")
 
 DECISION_ALLOW = "allow"
 DECISION_DENY = "deny"
@@ -545,6 +553,9 @@ PERSON_GROUP_TEXT = "Группа"
 PERSON_BIRTH_DATE_TEXT = "Дата рождения"
 EDUCATION_FORM_TEXT = "Форма обучения"
 EDUCATION_LEVEL_TEXT = "Уровень обучения"
+PERSON_POSITION_TEXT = "Должность"
+PERSON_DEPARTMENT_TEXT = "Кафедра"
+PERSON_DEGREE_TEXT = "Ученая степень"
 INSTITUTE_TEXT = "Институт"
 ISSUE_DATE_TEXT = "Дата выдачи"
 NO_DOCUMENT_TEXT = "Студенческого билета нет"
@@ -727,8 +738,7 @@ DAY_INFO_GAP_Y = 40
 RESULT_X = 30
 RESULT_Y = 215
 
-DAY_MIN_VISITORS = 3
-DAY_MAX_VISITORS = 6
+DAY_VISITORS_COUNT = 15
 DAY_MIN_BAD_VISITORS = 1
 DAY_MAX_BAD_VISITORS = 3
 DAY_PLAN_POPULATION_SIZE = 50
@@ -750,8 +760,8 @@ INSTITUTE_GROUP_PREFIXES = {
     "ХТИ": ("БИ",),
 }
 NEXT_VISITOR_DELAY = 900
-INSTRUCTION_PANEL_WIDTH = 820
-INSTRUCTION_PANEL_HEIGHT = 520
+INSTRUCTION_PANEL_WIDTH = 1000
+INSTRUCTION_PANEL_HEIGHT = 600
 INSTRUCTION_PANEL_PADDING = 32
 INSTRUCTION_TITLE_GAP = 46
 INSTRUCTION_LINE_GAP = 8
@@ -807,13 +817,16 @@ INSTRUCTIONS_BY_DAY = {
         "- Студенческий билет (для преподавателей - удостоверение преподавателя).",
         "- Год рождения не позднее {max_year}.",
         "- Дата выдачи строго 01.09.2024.",
-        "- Группа: формат АА-123456."
+        "- Группа студента: формат АА-123456.",
+        "- Должность преподавателя: {teacher_positions}."
     ],
     4: [
         "ПРАВИЛА ПРОПУСКА (ДЕНЬ 4):",
         "- Все правила предыдущего дня сохраняются.",
-        "- Форма обучения: {forms}.",
-        "- Уровень обучения: {levels}."
+        "- Форма обучения студента: {forms}.",
+        "- Кафедра преподавателя: {teacher_departments}.",
+        "- Уровень обучения студента: {levels}.",
+        "- Ученая степень преподавателя: {teacher_degrees}."
     ],
     5: [
         "ПРАВИЛА ПРОПУСКА (ВСЕ ПРОВЕРКИ АКТИВНЫ):",

@@ -72,8 +72,7 @@ def weighted_choice(variants, random_source):
 class GeneticDayPlanner:
     def __init__(
         self,
-        min_visitors,
-        max_visitors,
+        visitors_count,
         min_bad_visitors,
         max_bad_visitors,
         population_size,
@@ -81,8 +80,7 @@ class GeneticDayPlanner:
         mutation_chance,
         random_source=None,
     ):
-        self.min_visitors = min_visitors
-        self.max_visitors = max_visitors
+        self.visitors_count = visitors_count
         self.min_bad_visitors = min_bad_visitors
         self.max_bad_visitors = max_bad_visitors
         self.population_size = population_size
@@ -91,7 +89,7 @@ class GeneticDayPlanner:
         self.random = random_source or random.Random()
 
     def make_plan(self, day_number):
-        visitor_count = self.random.randint(self.min_visitors, self.max_visitors)
+        visitor_count = self.visitors_count
         target_bad = self.get_target_bad_count(day_number, visitor_count)
         population = []
 
@@ -258,7 +256,10 @@ class GameRules:
                 forms=forms,
                 levels=levels,
                 institutes=institutes,
-                group_rules=group_rules
+                group_rules=group_rules,
+                teacher_positions=", ".join(config.TEACHER_POSITIONS),
+                teacher_departments=", ".join(config.TEACHER_DEPARTMENTS),
+                teacher_degrees=", ".join(config.TEACHER_DEGREES)
             )
             lines.append(formatted_line)
 
@@ -366,17 +367,20 @@ class Person:
         birth_date: Optional[date] = None,
         document: Optional[Document] = None,
         is_important: bool = False,
+        gender: str = "",
     ):
         self.full_name = full_name
         self.group = group
         self.birth_date = birth_date
         self.document = document
         self.is_important = is_important
+        self.gender = gender
 
     def display_data(self) -> List[str]:
+        group_label = config.PERSON_POSITION_TEXT if self.is_important else config.PERSON_GROUP_TEXT
         return [
             f"{config.PERSON_FULL_NAME_TEXT}: {self.full_name}",
-            f"{config.PERSON_GROUP_TEXT}: {self.group}",
+            f"{group_label}: {self.group}",
             f"{config.PERSON_BIRTH_DATE_TEXT}: {display_date(self.birth_date)}",
         ]
 
@@ -384,13 +388,22 @@ class Person:
         if self.document is None:
             return [config.NO_DOCUMENT_TEXT]
 
+        if self.document.document_type == config.DOCUMENT_TYPE_VIP:
+            group_label = config.PERSON_POSITION_TEXT
+            edu_form_label = config.PERSON_DEPARTMENT_TEXT
+            edu_level_label = config.PERSON_DEGREE_TEXT
+        else:
+            group_label = config.PERSON_GROUP_TEXT
+            edu_form_label = config.EDUCATION_FORM_TEXT
+            edu_level_label = config.EDUCATION_LEVEL_TEXT
+
         return [
             self.document.document_type,
             f"{config.PERSON_FULL_NAME_TEXT}: {self.document.full_name}",
-            f"{config.PERSON_GROUP_TEXT}: {self.document.group}",
+            f"{group_label}: {self.document.group}",
             f"{config.PERSON_BIRTH_DATE_TEXT}: {self.document.display_birth_date()}",
-            f"{config.EDUCATION_FORM_TEXT}: {self.document.education_form}",
-            f"{config.EDUCATION_LEVEL_TEXT}: {self.document.education_level}",
+            f"{edu_form_label}: {self.document.education_form}",
+            f"{edu_level_label}: {self.document.education_level}",
             f"{config.INSTITUTE_TEXT}: {self.document.institute}",
             f"{config.ISSUE_DATE_TEXT}: {self.document.display_issue_date()}",
         ]
@@ -407,6 +420,7 @@ class Person:
             config.SAVE_BIRTH_DATE: date_to_save(self.birth_date),
             config.SAVE_DOCUMENT: document_data,
             config.SAVE_IS_IMPORTANT: self.is_important,
+            "gender": self.gender,
         }
 
     @staticmethod
@@ -420,6 +434,7 @@ class Person:
             birth_date=date_from_save(data.get(config.SAVE_BIRTH_DATE)),
             document=Document.from_save_data(data.get(config.SAVE_DOCUMENT)),
             is_important=bool(data.get(config.SAVE_IS_IMPORTANT, False)),
+            gender=str(data.get("gender", config.GENDER_MALE)),
         )
 
 
@@ -480,16 +495,25 @@ class PersonGenerator:
         return person
 
     def _generate_valid_person(self) -> Person:
-        full_name = self._generate_full_name()
-        birth_date = self._generate_valid_birth_date()
-        education_form = self.random.choice(self.rules.valid_education_forms)
-        education_level = self.random.choice(self.rules.valid_education_levels)
-        institute = self.random.choice(self.rules.valid_institutes)
-        group = self._generate_valid_group(institute)
-        issue_date = self._generate_valid_issue_date(birth_date)
-        
-        is_important = self.random.random() < 0.15
+        is_important = self.random.random() < 0.30
         document_type = config.DOCUMENT_TYPE_VIP if is_important else config.DOCUMENT_TYPE_STUDENT
+
+        institute = self.random.choice(self.rules.valid_institutes)
+
+        if is_important:
+            gender = config.GENDER_MALE
+            education_form = self.random.choice(config.TEACHER_DEPARTMENTS)
+            education_level = self.random.choice(config.TEACHER_DEGREES)
+            group = self.random.choice(config.TEACHER_POSITIONS)
+        else:
+            gender = self.random.choice(config.GENDERS)
+            education_form = self.random.choice(self.rules.valid_education_forms)
+            education_level = self.random.choice(self.rules.valid_education_levels)
+            group = self._generate_valid_group(institute)
+
+        full_name = self._generate_full_name(gender)
+        birth_date = self._generate_valid_birth_date()
+        issue_date = self._generate_valid_issue_date(birth_date)
 
         return Person(
             full_name=full_name,
@@ -506,6 +530,7 @@ class PersonGenerator:
                 document_type=document_type,
             ),
             is_important=is_important,
+            gender=gender,
         )
 
     def _apply_random_error(self, person: Person, reason: Optional[str] = None) -> None:
@@ -525,11 +550,20 @@ class PersonGenerator:
         elif reason == config.BAD_ISSUE_DATE:
             document.issue_date = self._generate_bad_issue_date(document.birth_date)
         elif reason == config.BAD_GROUP_FORMAT:
-            document.group = self.random.choice(config.BAD_GROUP_VARIANTS)
+            if document.document_type == config.DOCUMENT_TYPE_VIP:
+                document.group = self.random.choice(config.BAD_TEACHER_POSITIONS)
+            else:
+                document.group = self.random.choice(config.BAD_GROUP_VARIANTS)
         elif reason == config.BAD_EDUCATION_FORM:
-            document.education_form = self.random.choice(config.BAD_EDUCATION_FORMS)
+            if document.document_type == config.DOCUMENT_TYPE_VIP:
+                document.education_form = self.random.choice(config.BAD_TEACHER_DEPARTMENTS)
+            else:
+                document.education_form = self.random.choice(config.BAD_EDUCATION_FORMS)
         elif reason == config.BAD_EDUCATION_LEVEL:
-            document.education_level = self.random.choice(config.BAD_EDUCATION_LEVELS)
+            if document.document_type == config.DOCUMENT_TYPE_VIP:
+                document.education_level = self.random.choice(config.BAD_TEACHER_DEGREES)
+            else:
+                document.education_level = self.random.choice(config.BAD_EDUCATION_LEVELS)
         elif reason == config.BAD_INSTITUTE:
             document.institute = self.random.choice(config.BAD_INSTITUTES)
         elif reason == config.BAD_NOT_UNIQUE_PASS:
@@ -537,8 +571,7 @@ class PersonGenerator:
         elif reason == config.BAD_IMPOSTER:
             document.document_type = config.DOCUMENT_TYPE_VIP
 
-    def _generate_full_name(self) -> str:
-        gender = self.random.choice(config.GENDERS)
+    def _generate_full_name(self, gender: str) -> str:
 
         if gender == config.GENDER_FEMALE:
             first_name = self.random.choice(config.FEMALE_NAMES)
@@ -622,6 +655,11 @@ class Checker:
 
         group = person.document.group
 
+        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
+            if group not in config.TEACHER_POSITIONS:
+                errors.append(config.ERROR_BAD_GROUP_FORMAT)
+            return
+
         if not re.match(self.rules.group_pattern, group):
             errors.append(config.ERROR_BAD_GROUP_FORMAT)
             return
@@ -630,14 +668,28 @@ class Checker:
         if person.document is None:
             return
 
-        if person.document.education_form not in self.rules.valid_education_forms:
+        form = person.document.education_form
+
+        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
+            if form not in config.TEACHER_DEPARTMENTS:
+                errors.append(config.ERROR_BAD_EDUCATION_FORM)
+            return
+
+        if form not in self.rules.valid_education_forms:
             errors.append(config.ERROR_BAD_EDUCATION_FORM)
 
     def check_education_level(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
             return
 
-        if person.document.education_level not in self.rules.valid_education_levels:
+        level = person.document.education_level
+
+        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
+            if level not in config.TEACHER_DEGREES:
+                errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
+            return
+
+        if level not in self.rules.valid_education_levels:
             errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
 
     def check_institute(self, person: Person, errors: List[str]) -> None:
@@ -732,8 +784,7 @@ class GameModel:
             fine_amount=self.rules.fine_for_mistake,
         )
         self.day_planner = day_planner or GeneticDayPlanner(
-            config.DAY_MIN_VISITORS,
-            config.DAY_MAX_VISITORS,
+            config.DAY_VISITORS_COUNT,
             config.DAY_MIN_BAD_VISITORS,
             config.DAY_MAX_BAD_VISITORS,
             config.DAY_PLAN_POPULATION_SIZE,

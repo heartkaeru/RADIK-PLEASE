@@ -842,53 +842,101 @@ class GameModel:
             config.DAY_PLAN_MUTATION_CHANCE,
             self.random,
         )
-        self.round_number = 0
-        self.day_number = 0
-        self.day_plan = []
-        self.day_plan_index = 0
-        self.current_person: Optional[Person] = None
-        self.last_result: Optional[RoundResult] = None
-        self.game_over = False
-        self.game_over_reason = ""
-        self.day_finished = False
-        self.daily_processed = 0
-        self.daily_correct = 0
-        self.daily_mistakes = 0
-        self.daily_money_earned = 0
-        self.daily_money_lost = 0
+        self._round_number = 0
+        self._day_number = 0
+        self._day_plan = []
+        self._day_plan_index = 0
+        self._current_person: Optional[Person] = None
+        self._last_result: Optional[RoundResult] = None
+        self._game_over = False
+        self._game_over_reason = ""
+        self._day_finished = False
+        self._daily_processed = 0
+        self._daily_correct = 0
+        self._daily_mistakes = 0
+        self._daily_money_earned = 0
+        self._daily_money_lost = 0
 
         self.start_new_day()
         self.next_round()
 
-    def start_new_day(self) -> None:
-        self.day_number += 1
+    @property
+    def round_number(self) -> int:
+        return self._round_number
 
-        self.day_plan = self.day_planner.make_plan(self.day_number)
-        self.day_plan_index = 0
-        self.day_finished = False
-        self.daily_processed = 0
-        self.daily_correct = 0
-        self.daily_mistakes = 0
-        self.daily_money_earned = 0
-        self.daily_money_lost = 0
+    @property
+    def day_number(self) -> int:
+        return self._day_number
+
+    @property
+    def current_person(self) -> Optional[Person]:
+        return self._current_person
+
+    @property
+    def last_result(self) -> Optional[RoundResult]:
+        return self._last_result
+
+    @property
+    def game_over(self) -> bool:
+        return self._game_over
+
+    @property
+    def game_over_reason(self) -> str:
+        return self._game_over_reason
+
+    @property
+    def day_finished(self) -> bool:
+        return self._day_finished
+
+    @property
+    def daily_processed(self) -> int:
+        return self._daily_processed
+
+    @property
+    def daily_correct(self) -> int:
+        return self._daily_correct
+
+    @property
+    def daily_mistakes(self) -> int:
+        return self._daily_mistakes
+
+    @property
+    def daily_money_earned(self) -> int:
+        return self._daily_money_earned
+
+    @property
+    def daily_money_lost(self) -> int:
+        return self._daily_money_lost
+
+    def start_new_day(self) -> None:
+        self._day_number += 1
+
+        self._day_plan = self.day_planner.make_plan(self._day_number)
+        self._day_plan_index = 0
+        self._day_finished = False
+        self._daily_processed = 0
+        self._daily_correct = 0
+        self._daily_mistakes = 0
+        self._daily_money_earned = 0
+        self._daily_money_lost = 0
 
     def next_round(self) -> Optional[Person]:
-        if self.game_over:
+        if self._game_over:
             return None
 
-        if self.day_plan_index >= len(self.day_plan):
-            self.day_finished = True
-            self.current_person = None
+        if self._day_plan_index >= len(self._day_plan):
+            self._day_finished = True
+            self._current_person = None
             return None
 
-        should_be_invalid = self.day_plan[self.day_plan_index]
+        should_be_invalid = self._day_plan[self._day_plan_index]
         active_checks = self.get_active_checks()
         error_reason = self.choose_error_reason(should_be_invalid, active_checks)
-        self.day_plan_index += 1
-        self.round_number += 1
-        self.current_person = self.generate_person(should_be_invalid, error_reason)
+        self._day_plan_index += 1
+        self._round_number += 1
+        self._current_person = self.generate_person(should_be_invalid, error_reason)
 
-        return self.current_person
+        return self._current_person
 
     def choose_error_reason(
         self,
@@ -913,30 +961,30 @@ class GameModel:
         return self.generator.generate()
 
     def decide(self, decision: Union[Decision, str, bool]) -> RoundResult:
-        if self.current_person is None:
+        if self._current_person is None:
             raise RuntimeError(config.MESSAGE_NO_CURRENT_PERSON)
-        if self.game_over:
+        if self._game_over:
             raise RuntimeError(config.MESSAGE_GAME_ALREADY_OVER)
 
         player_decision = self._normalize_decision(decision)
-        check_result = self.checker.get_result(self.current_person, self.get_active_checks())
+        check_result = self.checker.get_result(self._current_person, self.get_active_checks())
         correct_decision = Decision.ALLOW if check_result.allow else Decision.DENY
         is_correct = player_decision == correct_decision
         money_delta = self.economy.apply_result(is_correct)
 
-        self.daily_processed += 1
+        self._daily_processed += 1
         if is_correct:
-            self.daily_correct += 1
+            self._daily_correct += 1
             if money_delta > 0:
-                self.daily_money_earned += money_delta
+                self._daily_money_earned += money_delta
         else:
-            self.daily_mistakes += 1
+            self._daily_mistakes += 1
             if money_delta < 0:
-                self.daily_money_lost -= money_delta
+                self._daily_money_lost -= money_delta
 
         if self.economy.money <= self.rules.dismissal_balance_limit:
-            self.game_over = True
-            self.game_over_reason = config.MESSAGE_DISMISSED
+            self._game_over = True
+            self._game_over_reason = config.MESSAGE_DISMISSED
 
         result = RoundResult(
             player_decision=player_decision,
@@ -945,27 +993,27 @@ class GameModel:
             errors=check_result.errors,
             money_delta=money_delta,
             balance=self.economy.money,
-            game_over=self.game_over,
-            game_over_reason=self.game_over_reason,
+            game_over=self._game_over,
+            game_over_reason=self._game_over_reason,
         )
-        self.last_result = result
+        self._last_result = result
 
-        if not self.game_over and not self.day_finished:
+        if not self._game_over and not self._day_finished:
             self.next_round()
 
         return result
 
     def get_instruction(self) -> List[str]:
-        return self.rules.instruction_lines(self.day_number)
+        return self.rules.instruction_lines(self._day_number)
 
     def get_active_checks(self) -> Tuple[str, ...]:
-        return get_active_checks(self.day_number)
+        return get_active_checks(self._day_number)
         
     def get_time_info(self) -> Tuple[int, str, str]:
-        current_date = date(2024, 9, 1) + timedelta(days=self.day_number - 1)
+        current_date = date(2024, 9, 1) + timedelta(days=self._day_number - 1)
         date_str = current_date.strftime(config.DATE_FORMAT)
         
-        time_minutes = 8 * 60 + (self.day_plan_index - 1) * 35
+        time_minutes = 8 * 60 + (self._day_plan_index - 1) * 35
         if time_minutes < 8 * 60:
             time_minutes = 8 * 60
             
@@ -973,29 +1021,29 @@ class GameModel:
         minutes = time_minutes % 60
         time_str = f"{hours:02d}:{minutes:02d}"
         
-        return self.day_number, date_str, time_str
+        return self._day_number, date_str, time_str
 
     def to_save_data(self) -> dict:
         current_person_data = None
 
-        if self.current_person is not None:
-            current_person_data = self.current_person.to_save_data()
+        if self._current_person is not None:
+            current_person_data = self._current_person.to_save_data()
 
         return {
             config.SAVE_MONEY: self.economy.money,
-            config.SAVE_ROUND_NUMBER: self.round_number,
-            config.SAVE_DAY_NUMBER: self.day_number,
-            config.SAVE_DAY_PLAN: self.day_plan,
-            config.SAVE_DAY_PLAN_INDEX: self.day_plan_index,
+            config.SAVE_ROUND_NUMBER: self._round_number,
+            config.SAVE_DAY_NUMBER: self._day_number,
+            config.SAVE_DAY_PLAN: self._day_plan,
+            config.SAVE_DAY_PLAN_INDEX: self._day_plan_index,
             config.SAVE_CURRENT_PERSON: current_person_data,
-            config.SAVE_GAME_OVER: self.game_over,
-            config.SAVE_GAME_OVER_REASON: self.game_over_reason,
-            config.SAVE_DAY_FINISHED: self.day_finished,
-            config.SAVE_DAILY_PROCESSED: self.daily_processed,
-            config.SAVE_DAILY_CORRECT: self.daily_correct,
-            config.SAVE_DAILY_MISTAKES: self.daily_mistakes,
-            config.SAVE_DAILY_MONEY_EARNED: self.daily_money_earned,
-            config.SAVE_DAILY_MONEY_LOST: self.daily_money_lost,
+            config.SAVE_GAME_OVER: self._game_over,
+            config.SAVE_GAME_OVER_REASON: self._game_over_reason,
+            config.SAVE_DAY_FINISHED: self._day_finished,
+            config.SAVE_DAILY_PROCESSED: self._daily_processed,
+            config.SAVE_DAILY_CORRECT: self._daily_correct,
+            config.SAVE_DAILY_MISTAKES: self._daily_mistakes,
+            config.SAVE_DAILY_MONEY_EARNED: self._daily_money_earned,
+            config.SAVE_DAILY_MONEY_LOST: self._daily_money_lost,
         }
 
     @staticmethod
@@ -1006,25 +1054,25 @@ class GameModel:
             return game
 
         game.economy.money = int(data.get(config.SAVE_MONEY, config.DEFAULT_MONEY))
-        game.round_number = int(data.get(config.SAVE_ROUND_NUMBER, 0))
-        game.day_number = int(data.get(config.SAVE_DAY_NUMBER, 1))
-        game.day_plan = GameModel.fix_day_plan(data.get(config.SAVE_DAY_PLAN))
-        game.day_plan_index = int(data.get(config.SAVE_DAY_PLAN_INDEX, 0))
-        game.current_person = Person.from_save_data(data.get(config.SAVE_CURRENT_PERSON))
-        game.game_over = bool(data.get(config.SAVE_GAME_OVER, False))
-        game.game_over_reason = str(data.get(config.SAVE_GAME_OVER_REASON, ""))
-        game.day_finished = bool(data.get(config.SAVE_DAY_FINISHED, False))
-        game.daily_processed = int(data.get(config.SAVE_DAILY_PROCESSED, 0))
-        game.daily_correct = int(data.get(config.SAVE_DAILY_CORRECT, 0))
-        game.daily_mistakes = int(data.get(config.SAVE_DAILY_MISTAKES, 0))
-        game.daily_money_earned = int(data.get(config.SAVE_DAILY_MONEY_EARNED, 0))
-        game.daily_money_lost = int(data.get(config.SAVE_DAILY_MONEY_LOST, 0))
+        game._round_number = int(data.get(config.SAVE_ROUND_NUMBER, 0))
+        game._day_number = int(data.get(config.SAVE_DAY_NUMBER, 1))
+        game._day_plan = GameModel.fix_day_plan(data.get(config.SAVE_DAY_PLAN))
+        game._day_plan_index = int(data.get(config.SAVE_DAY_PLAN_INDEX, 0))
+        game._current_person = Person.from_save_data(data.get(config.SAVE_CURRENT_PERSON))
+        game._game_over = bool(data.get(config.SAVE_GAME_OVER, False))
+        game._game_over_reason = str(data.get(config.SAVE_GAME_OVER_REASON, ""))
+        game._day_finished = bool(data.get(config.SAVE_DAY_FINISHED, False))
+        game._daily_processed = int(data.get(config.SAVE_DAILY_PROCESSED, 0))
+        game._daily_correct = int(data.get(config.SAVE_DAILY_CORRECT, 0))
+        game._daily_mistakes = int(data.get(config.SAVE_DAILY_MISTAKES, 0))
+        game._daily_money_earned = int(data.get(config.SAVE_DAILY_MONEY_EARNED, 0))
+        game._daily_money_lost = int(data.get(config.SAVE_DAILY_MONEY_LOST, 0))
 
-        if len(game.day_plan) == 0:
-            game.day_plan = game.day_planner.make_plan(game.day_number)
-            game.day_plan_index = 0
+        if len(game._day_plan) == 0:
+            game._day_plan = game.day_planner.make_plan(game._day_number)
+            game._day_plan_index = 0
 
-        if game.current_person is None and not game.game_over and not game.day_finished:
+        if game._current_person is None and not game._game_over and not game._day_finished:
             game.next_round()
 
         return game

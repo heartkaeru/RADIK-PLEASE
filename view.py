@@ -4,6 +4,10 @@ import config
 
 
 class Screen:
+    """
+    Класс, отвечающий за отрисовку графического интерфейса пользователя (GUI).
+    Управляет окном игры, загрузкой ресурсов и отображением всех экранов.
+    """
     def __init__(self):
         self.width = config.DEFAULT_WINDOW_WIDTH
         self.height = config.DEFAULT_WINDOW_HEIGHT
@@ -29,15 +33,11 @@ class Screen:
         table_image = pygame.image.load(config.TABLE_PATH).convert_alpha()
         self.table = pygame.transform.scale(table_image, (config.TABLE_WIDTH, config.TABLE_HEIGHT))
 
-        allow_img = pygame.image.load(config.ALLOW_BUTTON_PATH).convert_alpha()
-        self.allow_button_image = pygame.transform.scale(allow_img, (config.ALLOW_BUTTON_SIZE, config.ALLOW_BUTTON_SIZE))
-        allow_pressed_img = pygame.image.load(config.ALLOW_BUTTON_PRESSED_PATH).convert_alpha()
-        self.allow_button_pressed_image = pygame.transform.scale(allow_pressed_img, (config.ALLOW_BUTTON_SIZE, config.ALLOW_BUTTON_SIZE))
+        self.allow_button_image = self.create_image_button(config.ALLOW_BUTTON_PATH, config.ALLOW_BUTTON_SIZE)
+        self.allow_button_pressed_image = self.create_image_button(config.ALLOW_BUTTON_PRESSED_PATH, config.ALLOW_BUTTON_SIZE)
 
-        deny_img = pygame.image.load(config.DENY_BUTTON_PATH).convert_alpha()
-        self.deny_button_image = pygame.transform.scale(deny_img, (config.DENY_BUTTON_SIZE, config.DENY_BUTTON_SIZE))
-        deny_pressed_img = pygame.image.load(config.DENY_BUTTON_PRESSED_PATH).convert_alpha()
-        self.deny_button_pressed_image = pygame.transform.scale(deny_pressed_img, (config.DENY_BUTTON_SIZE, config.DENY_BUTTON_SIZE))
+        self.deny_button_image = self.create_image_button(config.DENY_BUTTON_PATH, config.DENY_BUTTON_SIZE)
+        self.deny_button_pressed_image = self.create_image_button(config.DENY_BUTTON_PRESSED_PATH, config.DENY_BUTTON_SIZE)
 
         self.person_images = {}
         self.walk_frames = {}
@@ -127,52 +127,52 @@ class Screen:
         self.game_rect = pygame.Rect(0, 0, self.width, self.height)
 
     def update_buttons(self) -> None:
+        """Обновляет позиционирование всех кнопок и слайдеров в зависимости от размера окна."""
         self.last_has_save = None
         self.update_menu_buttons(True)
         self.settings_buttons = {
-            config.BUTTON_MUSIC: self.create_settings_button(0),
-            config.BUTTON_SOUND: self.create_settings_button(2),
-            config.BUTTON_WINDOW_SIZE: self.create_settings_button(4),
-            config.BUTTON_BACK: self.create_settings_button(5),
+            config.BUTTON_MUSIC: self.create_ui_element(0, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT),
+            config.BUTTON_SOUND: self.create_ui_element(2, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT),
+            config.BUTTON_WINDOW_SIZE: self.create_ui_element(4, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT),
+            config.BUTTON_BACK: self.create_ui_element(5, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT),
         }
         self.settings_sliders = {
-            config.SLIDER_MUSIC_VOLUME: self.create_settings_slider(1),
-            config.SLIDER_SOUND_VOLUME: self.create_settings_slider(3),
+            config.SLIDER_MUSIC_VOLUME: self.create_ui_element(1, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.SLIDER_TRACK_WIDTH, config.SLIDER_TRACK_HEIGHT, config.SLIDER_TRACK_OFFSET_Y),
+            config.SLIDER_SOUND_VOLUME: self.create_ui_element(3, config.SETTINGS_FIRST_BUTTON_Y, config.SETTINGS_BUTTON_GAP, config.SLIDER_TRACK_WIDTH, config.SLIDER_TRACK_HEIGHT, config.SLIDER_TRACK_OFFSET_Y),
         }
 
     def update_menu_buttons(self, has_save: bool) -> None:
+        """Обновляет кнопки главного меню в зависимости от наличия сохранения."""
         if getattr(self, "last_has_save", None) == has_save:
             return
         self.last_has_save = has_save
 
         self.menu_buttons = {
-            config.BUTTON_START: self.create_button(0),
+            config.BUTTON_START: self.create_ui_element(0, config.MENU_FIRST_BUTTON_Y, config.MENU_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT),
         }
         
         button_idx = 1
         if has_save:
-            self.menu_buttons[config.BUTTON_CONTINUE] = self.create_button(button_idx)
+            self.menu_buttons[config.BUTTON_CONTINUE] = self.create_ui_element(button_idx, config.MENU_FIRST_BUTTON_Y, config.MENU_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
             button_idx += 1
             
-        self.menu_buttons[config.BUTTON_SETTINGS] = self.create_button(button_idx)
+        self.menu_buttons[config.BUTTON_SETTINGS] = self.create_ui_element(button_idx, config.MENU_FIRST_BUTTON_Y, config.MENU_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
         button_idx += 1
-        self.menu_buttons[config.BUTTON_EXIT] = self.create_button(button_idx)
+        self.menu_buttons[config.BUTTON_EXIT] = self.create_ui_element(button_idx, config.MENU_FIRST_BUTTON_Y, config.MENU_BUTTON_GAP, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
 
-    def create_button(self, number: int) -> pygame.Rect:
-        x = self.width // 2 - config.MENU_BUTTON_WIDTH // 2
-        y = config.MENU_FIRST_BUTTON_Y + number * config.MENU_BUTTON_GAP
-        return pygame.Rect(x, y, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
+    def create_image_button(self, path: str, size: int) -> pygame.Surface:
+        """Загружает и масштабирует изображение для кнопки-печати."""
+        img = pygame.image.load(path).convert_alpha()
+        return pygame.transform.scale(img, (size, size))
 
-    def create_settings_button(self, number: int) -> pygame.Rect:
-        x = self.width // 2 - config.MENU_BUTTON_WIDTH // 2
-        y = config.SETTINGS_FIRST_BUTTON_Y + number * config.SETTINGS_BUTTON_GAP
-        return pygame.Rect(x, y, config.MENU_BUTTON_WIDTH, config.MENU_BUTTON_HEIGHT)
-
-    def create_settings_slider(self, number: int) -> pygame.Rect:
-        x = self.width // 2 - config.SLIDER_TRACK_WIDTH // 2
-        y = config.SETTINGS_FIRST_BUTTON_Y + number * config.SETTINGS_BUTTON_GAP
-        y += config.SLIDER_TRACK_OFFSET_Y
-        return pygame.Rect(x, y, config.SLIDER_TRACK_WIDTH, config.SLIDER_TRACK_HEIGHT)
+    def create_ui_element(self, number: int, start_y: int, gap_y: int, width: int, height: int, offset_y: int = 0) -> pygame.Rect:
+        """
+        Универсальная фабрика для создания UI-элементов (кнопок, слайдеров).
+        Рассчитывает положение элемента по центру экрана с заданным смещением.
+        """
+        x = self.width // 2 - width // 2
+        y = start_y + number * gap_y + offset_y
+        return pygame.Rect(x, y, width, height)
 
     def draw_menu(self, has_save: bool) -> None:
         self.update_menu_buttons(has_save)
@@ -238,6 +238,7 @@ class Screen:
         deny_pressed: bool = False,
         visitor_state: str = "NONE",
     ) -> None:
+        """Отрисовывает основной игровой экран: стол, посетителя, документы, инструменты и информацию."""
         self.screen.fill(config.MENU_BACKGROUND_COLOR)
         self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed, visitor_state)
 

@@ -9,6 +9,11 @@ from view import Screen
 
 
 class GameController:
+    """
+    Основной контроллер игры.
+    Управляет циклом событий, взаимодействием между моделью (GameModel) и видом (Screen),
+    а также обработкой пользовательского ввода и переключением экранов.
+    """
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
@@ -50,6 +55,7 @@ class GameController:
         self.apply_window_mode()
 
     def run(self):
+        """Запускает основной игровой цикл."""
         while self.view.running:
             dt = self.clock.tick(60) / 1000.0
             self.handle_events()
@@ -59,6 +65,7 @@ class GameController:
         pygame.quit()
 
     def draw_current_screen(self):
+        """Определяет текущий экран и вызывает соответствующий метод отрисовки во view."""
         if self.screen_name == config.SCREEN_MENU:
             self.view.draw_menu(self.has_save())
         elif self.screen_name == config.SCREEN_SETTINGS:
@@ -108,6 +115,7 @@ class GameController:
         self.view.update_screen()
 
     def handle_events(self):
+        """Обрабатывает события Pygame (ввод с клавиатуры, мыши, закрытие окна)."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.save_game()
@@ -256,6 +264,7 @@ class GameController:
             self.screen_name = config.SCREEN_GAME
 
     def update_game_state(self, dt):
+        """Обновляет состояние игры (анимации, движение персонажа) с учетом прошедшего времени (dt)."""
         if self.screen_name == config.SCREEN_TUTORIAL:
             return
 
@@ -304,6 +313,10 @@ class GameController:
         self.next_visitor_time = None
 
     def make_decision(self, decision):
+        """
+        Обрабатывает решение игрока (разрешить/запретить).
+        Передает решение в модель, обновляет интерфейс и инициирует анимацию ухода посетителя.
+        """
         self.leaving_person = self.get_current_person()
         result = self.game_model.decide(decision)
         self.result_text = self.get_result_text(result)

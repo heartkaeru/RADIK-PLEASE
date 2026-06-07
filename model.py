@@ -8,6 +8,11 @@ import config
 
 
 class ShuffleBag:
+    """
+    Класс для реализации алгоритма "Shuffle Bag".
+    Позволяет равномерно и случайно выбирать элементы из заданного набора без повторений
+    до тех пор, пока все элементы не будут выбраны.
+    """
     def __init__(self, items, random_source=None):
         if len(items) == 0:
             raise ValueError("ShuffleBag не может быть пустым")
@@ -30,6 +35,11 @@ class ShuffleBag:
 
 
 class PseudoRandomChance:
+    """
+    Реализует механизм псевдорандомного распределения (Pseudo-Random Distribution).
+    С каждой неудачной попыткой шанс успеха увеличивается на заданный шаг (step),
+    что делает случайные события более предсказуемыми и равномерными.
+    """
     def __init__(self, base_chance, step, max_chance, random_source=None):
         self.base_chance = base_chance
         self.step = step
@@ -70,6 +80,10 @@ def weighted_choice(variants, random_source):
 
 
 class GeneticDayPlanner:
+    """
+    Генетический алгоритм для планирования дня (генерации последовательности валидных и невалидных посетителей).
+    Обеспечивает сбалансированное количество ошибок и предотвращает длинные серии одинаковых посетителей.
+    """
     def __init__(
         self,
         visitors_count,
@@ -212,6 +226,10 @@ class Decision(Enum):
 
 
 class GameRules:
+    """
+    Хранит правила игры и параметры валидации документов.
+    Также отвечает за генерацию текстов инструкций в зависимости от текущего дня.
+    """
     def __init__(
         self,
         max_valid_birth_year: int = config.MAX_VALID_BIRTH_YEAR,
@@ -276,6 +294,10 @@ class GameRules:
 
 
 class Economy:
+    """
+    Управляет игровой экономикой: текущим балансом, начислением наград за правильные
+    решения и штрафов за ошибки игрока.
+    """
     def __init__(
         self,
         money: int = config.DEFAULT_MONEY,
@@ -304,6 +326,10 @@ class Economy:
 
 
 class Document:
+    """
+    Представляет собой документ (студенческий билет или пропуск), предъявляемый посетителем.
+    Содержит личные данные, информацию об обучении или должности.
+    """
     def __init__(
         self,
         full_name: str = "",
@@ -360,6 +386,10 @@ class Document:
 
 
 class Person:
+    """
+    Модель посетителя.
+    Содержит фактические базовые атрибуты посетителя и предъявленный им документ.
+    """
     def __init__(
         self,
         full_name: str = "",
@@ -439,12 +469,20 @@ class Person:
 
 
 class CheckResult:
+    """
+    Содержит результаты проверки документа посетителя:
+    флаг разрешения/отказа и список выявленных несоответствий (ошибок).
+    """
     def __init__(self, allow: bool, errors: Tuple[str, ...]):
         self.allow = allow
         self.errors = errors
 
 
 class RoundResult:
+    """
+    Содержит сводку по итогам одного раунда (одного посетителя):
+    решение игрока, правильное решение, изменение баланса, ошибки и статус окончания игры.
+    """
     def __init__(
         self,
         player_decision: Decision,
@@ -467,6 +505,10 @@ class RoundResult:
 
 
 class PersonGenerator:
+    """
+    Генератор посетителей. Создает как валидных посетителей, так и посетителей с
+    ошибками в документах на основе вероятностей и правил.
+    """
     def __init__(self, rules: Optional[GameRules] = None, seed: Optional[int] = None):
         self.rules = rules or GameRules()
         self.random = random.Random(seed)
@@ -624,6 +666,10 @@ class PersonGenerator:
 
 
 class Checker:
+    """
+    Класс, отвечающий за проверку документов посетителя на соответствие правилам игры.
+    Сравнивает данные документа с фактическими данными и выявляет несоответствия.
+    """
     def __init__(self, rules: Optional[GameRules] = None):
         self.rules = rules or GameRules()
 
@@ -766,6 +812,10 @@ class Checker:
 
 
 class GameModel:
+    """
+    Главный класс игровой логики (Модель в паттерне MVC).
+    Управляет состоянием игры, днями, балансом, посетителями и их валидацией.
+    """
     def __init__(
         self,
         rules: Optional[GameRules] = None,

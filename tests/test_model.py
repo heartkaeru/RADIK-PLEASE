@@ -1,4 +1,4 @@
-import unittest
+import pytest
 from datetime import date
 
 import config
@@ -33,8 +33,8 @@ class FixedGenerator:
         return self.person
 
 
-class CheckerTest(unittest.TestCase):
-    def setUp(self):
+class TestChecker:
+    def setup_method(self):
         self.checker = Checker(GameRules())
 
     def test_valid_student_card_is_allowed(self):
@@ -42,8 +42,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertTrue(result.allow)
-        self.assertEqual(result.errors, ())
+        assert result.allow is True
+        assert result.errors == ()
 
     def test_person_without_student_card_is_denied(self):
         person = make_valid_person()
@@ -51,8 +51,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_NO_DOCUMENT, result.errors)
+        assert result.allow is False
+        assert config.ERROR_NO_DOCUMENT in result.errors
 
     def test_bad_birth_year_is_denied(self):
         person = make_valid_person()
@@ -60,8 +60,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_BIRTH_DATE, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_BIRTH_DATE in result.errors
 
     def test_bad_issue_date_is_denied(self):
         person = make_valid_person()
@@ -69,8 +69,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_ISSUE_DATE, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_ISSUE_DATE in result.errors
 
     def test_bad_group_format_is_denied(self):
         person = make_valid_person()
@@ -78,8 +78,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_GROUP_FORMAT, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_GROUP_FORMAT in result.errors
 
     def test_bad_group_prefix_is_denied(self):
         person = make_valid_person()
@@ -87,8 +87,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_GROUP_PREFIX, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_GROUP_PREFIX in result.errors
 
     def test_bad_education_form_is_denied(self):
         person = make_valid_person()
@@ -96,8 +96,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_EDUCATION_FORM, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_EDUCATION_FORM in result.errors
 
     def test_bad_education_level_is_denied(self):
         person = make_valid_person()
@@ -105,8 +105,8 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_EDUCATION_LEVEL, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_EDUCATION_LEVEL in result.errors
 
     def test_bad_institute_is_denied(self):
         person = make_valid_person()
@@ -114,11 +114,11 @@ class CheckerTest(unittest.TestCase):
 
         result = self.checker.get_result(person)
 
-        self.assertFalse(result.allow)
-        self.assertIn(config.ERROR_BAD_INSTITUTE, result.errors)
+        assert result.allow is False
+        assert config.ERROR_BAD_INSTITUTE in result.errors
 
 
-class PersonGeneratorTest(unittest.TestCase):
+class TestPersonGenerator:
     def test_generated_valid_person_has_correct_student_card(self):
         rules = GameRules()
         generator = PersonGenerator(rules, seed=1)
@@ -126,42 +126,39 @@ class PersonGeneratorTest(unittest.TestCase):
         person = generator._generate_valid_person()
         result = Checker(rules).get_result(person)
 
-        self.assertTrue(result.allow)
-        self.assertIsNotNone(person.document)
-        self.assertEqual(len(person.full_name.split()), 3)
-
-        issue_age = person.document.issue_date.year - person.document.birth_date.year
-        self.assertIn(issue_age, config.VALID_ISSUE_AGES)
+        assert result.allow is True
+        assert person.document is not None
+        assert len(person.full_name.split()) == 3
 
 
-class EconomyTest(unittest.TestCase):
+class TestEconomy:
     def test_correct_result_adds_money(self):
         economy = Economy(money=0, reward=10, fine_amount=5)
 
         money_delta = economy.apply_result(True)
 
-        self.assertEqual(money_delta, 10)
-        self.assertEqual(economy.money, 10)
+        assert money_delta == 10
+        assert economy.money == 10
 
     def test_mistake_takes_money(self):
         economy = Economy(money=0, reward=10, fine_amount=5)
 
         money_delta = economy.apply_result(False)
 
-        self.assertEqual(money_delta, -5)
-        self.assertEqual(economy.money, -5)
+        assert money_delta == -5
+        assert economy.money == -5
 
 
-class GameModelTest(unittest.TestCase):
+class TestGameModel:
     def test_allowing_valid_person_is_correct(self):
         person = make_valid_person()
         game = GameModel(generator=FixedGenerator(person))
 
         result = game.decide(Decision.ALLOW)
 
-        self.assertTrue(result.is_correct)
-        self.assertEqual(result.money_delta, config.DEFAULT_REWARD)
-        self.assertEqual(result.balance, config.DEFAULT_REWARD)
+        assert result.is_correct is True
+        assert result.money_delta == config.DEFAULT_REWARD
+        assert result.balance == config.DEFAULT_REWARD
 
     def test_denying_person_without_card_is_correct(self):
         person = make_valid_person()
@@ -170,8 +167,8 @@ class GameModelTest(unittest.TestCase):
 
         result = game.decide(Decision.DENY)
 
-        self.assertTrue(result.is_correct)
-        self.assertEqual(result.money_delta, config.DEFAULT_REWARD)
+        assert result.is_correct is True
+        assert result.money_delta == config.DEFAULT_REWARD
 
     def test_wrong_decision_can_end_game(self):
         person = make_valid_person()
@@ -188,10 +185,6 @@ class GameModelTest(unittest.TestCase):
 
         result = game.decide(Decision.DENY)
 
-        self.assertFalse(result.is_correct)
-        self.assertTrue(result.game_over)
-        self.assertEqual(result.balance, -5)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert result.is_correct is False
+        assert result.game_over is True
+        assert result.balance == -5

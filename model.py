@@ -710,6 +710,12 @@ class Checker:
             errors.append(config.ERROR_BAD_GROUP_FORMAT)
             return
 
+        prefix = group.split(config.GROUP_SEPARATOR)[0]
+        if prefix not in self.rules.institute_group_prefixes.get(person.document.institute, []):
+            if hasattr(config, 'ERROR_BAD_GROUP_PREFIX'):
+                errors.append(config.ERROR_BAD_GROUP_PREFIX)
+            return
+
     def check_education_form(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
             return

@@ -6,6 +6,8 @@ import pygame
 import config
 from model import Decision, GameModel
 from view import Screen
+from pool import ObjectPool, FloatingTextEffect
+from behavior_tree import build_visitor_tree
 
 
 class GameController:
@@ -36,8 +38,8 @@ class GameController:
         self.instruction_open = False
         self.student_card_open = False
         self.visitor_visible = False
-        self.result_text = ""
-        self.result_is_correct = True
+        self.effect_pool = ObjectPool(FloatingTextEffect)
+        self.active_effects = []
         self.next_visitor_time = None
         self.active_slider = None
         self.clock = pygame.time.Clock()
@@ -48,6 +50,9 @@ class GameController:
         self.deny_pressed = False
         self.fade_alpha = 0.0
         self.fade_state = "NONE"
+        self.visitor_tree = None
+        self.decision_made = None
+        self.speech_bubble_text = None
 
         if not self.music_enabled:
             pygame.mixer.music.pause()
@@ -87,8 +92,7 @@ class GameController:
                 self.get_current_person(),
                 self.visitor_visible,
                 self.student_card_open,
-                self.result_text,
-                self.result_is_correct,
+                self.active_effects,
                 self.instruction_open,
                 self.get_instruction_lines(),
                 visitor_position=visitor_pos,
@@ -96,6 +100,7 @@ class GameController:
                 allow_pressed=self.allow_pressed,
                 deny_pressed=self.deny_pressed,
                 visitor_state=self.visitor_state,
+                speech_bubble_text=self.speech_bubble_text,
             )
         elif self.screen_name == config.SCREEN_DAY_SUMMARY:
             self.view.draw_day_summary(
@@ -161,6 +166,9 @@ class GameController:
                 self.visitor_visible = True
                 self.visitor_state = "WALKING_IN"
                 self.visitor_x = config.DEFAULT_WINDOW_WIDTH
+                self.visitor_tree = build_visitor_tree()
+                self.decision_made = None
+                self.speech_bubble_text = None
                 self.save_game()
 
     def handle_tutorial_click(self, mouse_pos):
@@ -244,9 +252,12 @@ class GameController:
         self.visitor_visible = True
         self.visitor_state = "WALKING_IN"
         self.visitor_x = config.DEFAULT_WINDOW_WIDTH
-        self.result_text = ""
+        self.active_effects.clear()
         self.next_visitor_time = None
         self.screen_name = config.SCREEN_TUTORIAL
+        self.visitor_tree = build_visitor_tree()
+        self.decision_made = None
+        self.speech_bubble_text = None
 
     def continue_game(self):
         if self.game_model is None:
@@ -262,11 +273,20 @@ class GameController:
             self.visitor_x = config.DEFAULT_WINDOW_WIDTH
             self.student_card_open = False
             self.screen_name = config.SCREEN_GAME
+            self.visitor_tree = build_visitor_tree()
+            self.decision_made = None
+            self.speech_bubble_text = None
 
     def update_game_state(self, dt):
         """Обновляет состояние игры (анимации, движение персонажа) с учетом прошедшего времени (dt)."""
         if self.screen_name == config.SCREEN_TUTORIAL:
             return
+
+        for effect in self.active_effects[:]:
+            effect.update(dt)
+            if not effect.active:
+                self.active_effects.remove(effect)
+                self.effect_pool.release(effect)
 
         if self.fade_state == "FADE_OUT":
             self.fade_alpha += config.FADE_SPEED * dt
@@ -282,22 +302,8 @@ class GameController:
                 self.fade_state = "NONE"
             return
             
-        if self.visitor_state == "WALKING_IN":
-            self.visitor_x -= 1000 * dt
-            if self.visitor_x <= config.PERSON_RECT_X:
-                self.visitor_x = config.PERSON_RECT_X
-                self.visitor_state = "AT_DESK"
-        elif self.visitor_state == "WALKING_OUT":
-            self.visitor_x -= 1000 * dt
-            if self.visitor_x <= -config.PERSON_RECT_WIDTH:
-                self.visitor_state = "NONE"
-                self.visitor_visible = False
-                if self.game_model and not self.game_model.game_over:
-                    if self.game_model.day_finished:
-                        self.fade_state = "FADE_OUT"
-                        self.next_visitor_time = None
-                    else:
-                        self.next_visitor_time = pygame.time.get_ticks() + 200
+        if self.visitor_tree and self.visitor_visible:
+            self.visitor_tree.tick(self, dt)
 
         if self.next_visitor_time is None:
             return
@@ -309,28 +315,17 @@ class GameController:
         self.visitor_state = "WALKING_IN"
         self.visitor_x = config.DEFAULT_WINDOW_WIDTH
         self.student_card_open = False
-        self.result_text = ""
         self.next_visitor_time = None
+        self.visitor_tree = build_visitor_tree()
+        self.decision_made = None
+        self.speech_bubble_text = None
 
     def make_decision(self, decision):
         """
-        Обрабатывает решение игрока (разрешить/запретить).
-        Передает решение в модель, обновляет интерфейс и инициирует анимацию ухода посетителя.
+        Устанавливает решение игрока, которое затем будет обработано деревом поведения.
         """
-        self.leaving_person = self.get_current_person()
-        result = self.game_model.decide(decision)
-        self.result_text = self.get_result_text(result)
-        self.result_is_correct = result.is_correct
-        self.visitor_state = "WALKING_OUT"
-        self.student_card_open = False
-
-        if result.game_over:
-            self.result_text = result.game_over_reason
-            self.next_visitor_time = None
-            self.delete_save()
-        else:
-            self.next_visitor_time = None
-            self.save_game()
+        if self.decision_made is None:
+            self.decision_made = decision
 
     def get_result_text(self, result):
         if result.is_correct:

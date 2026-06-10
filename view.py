@@ -79,6 +79,13 @@ class Screen:
             self.instruction_bg_image = pygame.transform.scale(instruction_bg_img, (config.INSTRUCTION_PANEL_WIDTH, config.INSTRUCTION_PANEL_HEIGHT))
         except Exception:
             self.instruction_bg_image = None
+            
+        try:
+            speech_bubble_img = pygame.image.load(config.SPEECH_BUBBLE_PATH).convert_alpha()
+            # Уменьшим или отмасштабируем баббл, если нужно. Допустим, 250x150
+            self.speech_bubble_image = pygame.transform.scale(speech_bubble_img, (250, 150))
+        except Exception:
+            self.speech_bubble_image = None
 
         self.allow_button_rect = pygame.Rect(
             config.ALLOW_BUTTON_X,
@@ -228,8 +235,7 @@ class Screen:
         person=None,
         visitor_visible: bool = True,
         student_card_open: bool = False,
-        result_text: str = "",
-        result_is_correct: bool = True,
+        active_effects=None,
         instruction_open: bool = False,
         instruction_lines=None,
         visitor_position=None,
@@ -237,16 +243,20 @@ class Screen:
         allow_pressed: bool = False,
         deny_pressed: bool = False,
         visitor_state: str = "NONE",
+        speech_bubble_text: str = None,
     ) -> None:
         """Отрисовывает основной игровой экран: стол, посетителя, документы, инструменты и информацию."""
         self.screen.fill(config.MENU_BACKGROUND_COLOR)
-        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed, visitor_state)
+        self.draw_game_scene(person, visitor_visible, visitor_position, student_card_on_table, allow_pressed, deny_pressed, visitor_state, speech_bubble_text)
 
         scaled_scene = pygame.transform.scale(self.game_scene, self.game_rect.size)
         self.screen.blit(scaled_scene, self.game_rect)
         self.draw_balance(balance)
         self.draw_day_info(day_number, date_string, time_string)
-        self.draw_result(result_text, result_is_correct)
+        
+        if active_effects:
+            for effect in active_effects:
+                effect.draw(self.screen)
 
         if student_card_open and person is not None:
             self.draw_student_card_panel(person)
@@ -263,6 +273,7 @@ class Screen:
         allow_pressed: bool = False,
         deny_pressed: bool = False,
         visitor_state: str = "NONE",
+        speech_bubble_text: str = None,
     ) -> None:
         self.game_scene.blit(self.background_image, (config.BACKGROUND_X, config.BACKGROUND_Y))
 
@@ -282,6 +293,23 @@ class Screen:
                 if frame_index % 2 != 0:
                     person_rect.y -= 10
             self.game_scene.blit(img, person_rect)
+            
+            if speech_bubble_text and self.speech_bubble_image:
+                # Рисуем баббл правее и выше персонажа
+                bubble_x = person_rect.right - 50
+                bubble_y = person_rect.top - 100
+                self.game_scene.blit(self.speech_bubble_image, (bubble_x, bubble_y))
+                
+                # Рисуем текст внутри баббла
+                wrapped_lines = self.wrap_text(speech_bubble_text, self.instruction_font, self.speech_bubble_image.get_width() - 40)
+                text_y = bubble_y + 20
+                for line in wrapped_lines:
+                    # Черный текст
+                    text_surface = self.instruction_font.render(line, True, (0, 0, 0))
+                    # Центрируем
+                    text_x = bubble_x + (self.speech_bubble_image.get_width() - text_surface.get_width()) // 2
+                    self.game_scene.blit(text_surface, (text_x, text_y))
+                    text_y += self.instruction_font.get_height() + 2
 
         self.game_scene.blit(self.table, (config.TABLE_X, config.TABLE_Y))
         self.draw_table_tools(allow_pressed, deny_pressed)
@@ -324,17 +352,7 @@ class Screen:
         label_time = self.myfont.render(time_text, True, (255, 255, 255))
         self.screen.blit(label_time, (config.DAY_INFO_X, config.DAY_INFO_Y + config.DAY_INFO_GAP_Y * 2))
 
-    def draw_result(self, text: str, is_correct: bool) -> None:
-        if text == "":
-            return
 
-        color = config.RESULT_CORRECT_COLOR
-        if not is_correct:
-            color = config.RESULT_MISTAKE_COLOR
-
-        label = self.myfont.render(text, True, color)
-        label_rect = label.get_rect(topleft=(config.RESULT_X, config.RESULT_Y))
-        self.screen.blit(label, label_rect)
 
     def draw_table_tools(self, allow_pressed: bool, deny_pressed: bool) -> None:
         if allow_pressed:

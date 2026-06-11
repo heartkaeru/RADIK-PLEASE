@@ -1,6 +1,7 @@
 import pygame
 
 import config
+import procedural
 
 
 class Screen:
@@ -107,6 +108,7 @@ class Screen:
 
         self.running = True
         self.clock = pygame.time.Clock()
+        self.procedural_cache = {}
 
     def create_font(self, size: int) -> pygame.font.Font:
         font = pygame.font.SysFont(config.FONT_NAME, size)
@@ -370,8 +372,32 @@ class Screen:
         panel.centerx = self.width // 2
         panel.y = config.STUDENT_CARD_PANEL_Y
 
-        pygame.draw.rect(self.screen, config.STUDENT_CARD_PANEL_COLOR, panel)
+        seed = person.document.seed if person.document else 0
+        is_vip = person.document.document_type == config.DOCUMENT_TYPE_VIP if person.document else False
+
+        person_id = "male"
+        if person:
+            if person.is_important:
+                person_id = "professor"
+            elif person.gender == config.GENDER_FEMALE:
+                person_id = "female"
+        original_sprite = self.person_images[person_id]
+
+        if seed not in self.procedural_cache:
+            bg_surf = procedural.generate_card_background(seed, panel.width, panel.height, is_vip)
+            avatar_surf = procedural.generate_document_photo(original_sprite, config.STUDENT_CARD_PHOTO_WIDTH, config.STUDENT_CARD_PHOTO_HEIGHT, seed)
+            sig_surf = procedural.generate_signature(seed, config.STUDENT_CARD_SIGNATURE_WIDTH, config.STUDENT_CARD_SIGNATURE_HEIGHT)
+            self.procedural_cache[seed] = (bg_surf, avatar_surf, sig_surf)
+
+        bg_surf, avatar_surf, sig_surf = self.procedural_cache[seed]
+
+        self.screen.blit(bg_surf, panel.topleft)
         pygame.draw.rect(self.screen, config.STUDENT_CARD_PANEL_BORDER_COLOR, panel, 2)
+
+        # Draw avatar
+        avatar_x = panel.right - config.STUDENT_CARD_PANEL_PADDING - config.STUDENT_CARD_PHOTO_WIDTH
+        avatar_y = panel.top + config.STUDENT_CARD_PANEL_PADDING
+        self.screen.blit(avatar_surf, (avatar_x, avatar_y))
 
         x = panel.x + config.STUDENT_CARD_PANEL_PADDING
         y = panel.y + config.STUDENT_CARD_PANEL_PADDING
@@ -389,6 +415,11 @@ class Screen:
                 y += self.student_card_font.get_height() + config.STUDENT_CARD_LINE_GAP
 
             y += config.STUDENT_CARD_LINE_GAP
+
+        # Draw signature
+        sig_x = panel.left + config.STUDENT_CARD_PANEL_PADDING
+        sig_y = panel.bottom - config.STUDENT_CARD_PANEL_PADDING - config.STUDENT_CARD_SIGNATURE_HEIGHT
+        self.screen.blit(sig_surf, (sig_x, sig_y))
 
     def draw_instruction(self, instruction_lines) -> None:
         if instruction_lines is None:

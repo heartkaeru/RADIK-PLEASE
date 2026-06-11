@@ -340,6 +340,7 @@ class Document:
         institute: str = "",
         issue_date: Optional[date] = None,
         document_type: str = config.DOCUMENT_TYPE_STUDENT,
+        seed: Optional[int] = None,
     ):
         self.full_name = full_name
         self.group = group
@@ -349,6 +350,7 @@ class Document:
         self.institute = institute
         self.issue_date = issue_date
         self.document_type = document_type
+        self.seed = seed if seed is not None else random.randint(1, 2000000000)
 
     def display_birth_date(self) -> str:
         return display_date(self.birth_date)
@@ -366,6 +368,7 @@ class Document:
             config.SAVE_INSTITUTE: self.institute,
             config.SAVE_ISSUE_DATE: date_to_save(self.issue_date),
             config.SAVE_DOCUMENT_TYPE: self.document_type,
+            config.SAVE_SEED: self.seed,
         }
 
     @staticmethod
@@ -382,6 +385,7 @@ class Document:
             institute=str(data.get(config.SAVE_INSTITUTE, "")),
             issue_date=date_from_save(data.get(config.SAVE_ISSUE_DATE)),
             document_type=str(data.get(config.SAVE_DOCUMENT_TYPE, config.DOCUMENT_TYPE_STUDENT)),
+            seed=data.get(config.SAVE_SEED),
         )
 
 
@@ -570,6 +574,7 @@ class PersonGenerator:
                 institute=institute,
                 issue_date=issue_date,
                 document_type=document_type,
+                seed=self.random.randint(1, 2000000000),
             ),
             is_important=is_important,
             gender=gender,

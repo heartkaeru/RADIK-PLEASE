@@ -4,8 +4,8 @@ DEFAULT_DISMISSAL_BALANCE = -50
 DEFAULT_MONEY = 0
 
 
-MIN_BIRTH_YEAR = 1980
-MAX_BIRTH_YEAR = 2025
+MIN_BIRTH_YEAR = 2002
+MAX_BIRTH_YEAR = 2015
 MAX_VALID_BIRTH_YEAR = 2007
 MIN_DAY = 1
 MAX_SAFE_DAY = 28
@@ -13,6 +13,7 @@ MIN_MONTH = 1
 MAX_MONTH = 12
 ISSUE_DATE_DAY = 1
 ISSUE_DATE_MONTH = 9
+ISSUE_DATE_YEAR = 2026
 
 MIN_GROUP_NUMBER = 100000
 MAX_GROUP_NUMBER = 999999
@@ -582,6 +583,7 @@ ICON_PATH = "assets/images/icon.png"
 BACKGROUND_PATH = "assets/images/bg.png"
 TABLE_PATH = "assets/images/table.png"
 MUSIC_PATH = "assets/sounds/bg.mp3"
+INSTRUCTION_FONT_PATH = "assets/fonts/Regez-Regular.otf"
 DEFAULT_MUSIC_VOLUME = 0.4
 DEFAULT_SOUND_VOLUME = 0.7
 DEFAULT_MUSIC_ENABLED = True
@@ -715,7 +717,7 @@ TITLE_Y = 120
 TITLE_FONT_SIZE = 64
 BUTTON_FONT_SIZE = 38
 GAME_FONT_SIZE = 40
-INSTRUCTION_FONT_SIZE = 24
+INSTRUCTION_FONT_SIZE = 36
 STUDENT_CARD_FONT_SIZE = 28
 
 BACKGROUND_X = 0
@@ -742,7 +744,7 @@ STUDENT_CARD_PHOTO_WIDTH = 120
 STUDENT_CARD_PHOTO_HEIGHT = 160
 STUDENT_CARD_SIGNATURE_WIDTH = 250
 STUDENT_CARD_SIGNATURE_HEIGHT = 80
-INSTRUCTION_BG_PATH = "assets/images/instruction_bg.png"
+INSTRUCTION_BG_PATH = "assets/images/book_instruction.png"
 ALLOW_BUTTON_PATH = "assets/images/btn_allow.png"
 ALLOW_BUTTON_PRESSED_PATH = "assets/images/btn_allow_pressed.png"
 DENY_BUTTON_PATH = "assets/images/btn_deny.png"
@@ -783,8 +785,8 @@ INSTITUTE_GROUP_PREFIXES = {
     "ФТИ": ("ПИ",),
     "ХТИ": ("БИ",),
 }
-INSTRUCTION_PANEL_WIDTH = 1000
-INSTRUCTION_PANEL_HEIGHT = 600
+INSTRUCTION_PANEL_WIDTH = 1200
+INSTRUCTION_PANEL_HEIGHT = 800
 INSTRUCTION_PANEL_PADDING = 32
 INSTRUCTION_TITLE_GAP = 46
 INSTRUCTION_LINE_GAP = 8
@@ -804,59 +806,98 @@ RESULT_CORRECT_COLOR = (60, 220, 90)
 RESULT_MISTAKE_COLOR = (230, 70, 70)
 INSTRUCTION_PANEL_COLOR = (28, 28, 28)
 INSTRUCTION_BORDER_COLOR = (120, 120, 120)
-INSTRUCTION_TEXT_COLOR = (255, 255, 255)
+INSTRUCTION_TEXT_COLOR = (0, 0, 0)
 STUDENT_CARD_PANEL_COLOR = (245, 245, 240)
 STUDENT_CARD_PANEL_BORDER_COLOR = (20, 20, 20)
 STUDENT_CARD_PANEL_TEXT_COLOR = (20, 20, 20)
 
 
-MIN_ISSUE_YEAR = 2024
-MAX_ISSUE_YEAR = 2024
-
 INSTRUCTION_DAY = "День {day}. Сегодняшние правила:"
 
 INSTRUCTIONS_BY_DAY = {
-    1: [
-        "ПРАВИЛА ПРОПУСКА:",
-        "- Обязателен студенческий билет (для преподавателей - удостоверение).",
-        "- Год рождения посетителя не позднее {max_year}.",
-        "",
-        "ИНСТРУКЦИЯ:",
-        "Нажмите зеленую кнопку чтобы пропустить",
-        "и красную в ином случае."
-    ],
-    2: [
-        "ПРАВИЛА ПРОПУСКА:",
-        "- Обязателен студенческий билет (для преподавателей - удостоверение преподавателя).",
-        "- Год рождения не позднее {max_year}.",
-        "- Дата выдачи строго 01.09.2024.",
-        "",
-        "ВНИМАНИЕ:",
-        "Пропускайте преподавателей только с удостоверением!"
-    ],
-    3: [
-        "ПРАВИЛА ПРОПУСКА:",
-        "- Студенческий билет (для преподавателей - удостоверение преподавателя).",
-        "- Год рождения не позднее {max_year}.",
-        "- Дата выдачи строго 01.09.2024.",
-        "- Группа студента: формат АА-123456.",
-        "- Должность преподавателя: {teacher_positions}."
-    ],
-    4: [
-        "ПРАВИЛА ПРОПУСКА (ДЕНЬ 4):",
-        "- Все правила предыдущего дня сохраняются.",
-        "- Форма обучения студента: {forms}.",
-        "- Кафедра преподавателя: {teacher_departments}.",
-        "- Уровень обучения студента: {levels}.",
-        "- Ученая степень преподавателя: {teacher_degrees}."
-    ],
-    5: [
-        "ПРАВИЛА ПРОПУСКА (ВСЕ ПРОВЕРКИ АКТИВНЫ):",
-        "- Правила 4-го дня.",
-        "- Институт должен быть только в списке разрешенных.",
-        "",
-        "РАЗРЕШЕННЫЕ ИНСТИТУТЫ:",
-        "{institutes}"
-    ]
+    1: {
+        "students": [
+            "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
+            "- Обязателен студенческий билет.",
+            "- Год рождения студента не позднее {max_year}.",
+            "",
+            "ИНСТРУКЦИЯ:",
+            "Нажмите зеленую кнопку чтобы пропустить",
+            "и красную в ином случае."
+        ],
+        "teachers": [
+            "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
+            "- Обязательно удостоверение преподавателя."
+        ]
+    },
+    2: {
+        "students": [
+            "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
+            "- Обязателен студенческий билет.",
+            "- Год рождения студента не позднее {max_year}.",
+            "- Дата выдачи строго 01.09.2026."
+        ],
+        "teachers": [
+            "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
+            "- Обязательно удостоверение преподавателя.",
+            "- Дата выдачи строго 01.09.2026."
+        ]
+    },
+    3: {
+        "students": [
+            "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
+            "- Обязателен студенческий билет.",
+            "- Год рождения студента не позднее {max_year}.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Группа студента: формат АА-123456."
+        ],
+        "teachers": [
+            "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
+            "- Обязательно удостоверение преподавателя.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Должность преподавателя:",
+            "  {teacher_positions}."
+        ]
+    },
+    4: {
+        "students": [
+            "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
+            "- Обязателен студенческий билет.",
+            "- Год рождения студента не позднее {max_year}.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Группа студента: формат АА-123456.",
+            "- Форма обучения студента: {forms}.",
+            "- Уровень обучения студента: {levels}."
+        ],
+        "teachers": [
+            "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
+            "- Обязательно удостоверение преподавателя.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Должность преподавателя: {teacher_positions}.",
+            "- Кафедра: {teacher_departments}.",
+            "- Ученая степень: {teacher_degrees}."
+        ]
+    },
+    5: {
+        "students": [
+            "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
+            "- Обязателен студенческий билет.",
+            "- Год рождения студента не позднее {max_year}.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Группа студента: формат АА-123456.",
+            "- Форма обучения студента: {forms}.",
+            "- Уровень обучения студента: {levels}.",
+            "- Разрешенные институты:",
+            "  {institutes}"
+        ],
+        "teachers": [
+            "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
+            "- Обязательно удостоверение преподавателя.",
+            "- Дата выдачи строго 01.09.2026.",
+            "- Должность преподавателя: {teacher_positions}.",
+            "- Кафедра: {teacher_departments}.",
+            "- Ученая степень: {teacher_degrees}."
+        ]
+    }
 }
-SPEECH_BUBBLE_PATH = "assets/speech_bubble.png"
+SPEECH_BUBBLE_PATH = "assets/images/speech_bubble.png"

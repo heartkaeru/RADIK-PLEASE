@@ -254,34 +254,34 @@ class GameRules:
         self.reward_for_correct_decision = reward_for_correct_decision
         self.fine_for_mistake = fine_for_mistake
         self.dismissal_balance_limit = dismissal_balance_limit
-        self.current_date = current_date or date.today()
+        self.current_date = current_date or date(2026, 9, 1)
 
-    def instruction_lines(self, day_number: int = 1) -> List[str]:
+    def instruction_lines(self, day_number: int = 1) -> dict:
         forms = ", ".join(self.valid_education_forms)
         levels = ", ".join(self.valid_education_levels)
         institutes = ", ".join(self.valid_institutes)
         group_rules = self.get_group_rules_text()
         
-        lines = [
-            config.INSTRUCTION_DAY.format(day=day_number),
-        ]
-            
         day_instructions = config.INSTRUCTIONS_BY_DAY.get(day_number, config.INSTRUCTIONS_BY_DAY[1])
         
-        for line in day_instructions:
-            formatted_line = line.format(
-                max_year=self.max_valid_birth_year,
-                forms=forms,
-                levels=levels,
-                institutes=institutes,
-                group_rules=group_rules,
-                teacher_positions=", ".join(config.TEACHER_POSITIONS),
-                teacher_departments=", ".join(config.TEACHER_DEPARTMENTS),
-                teacher_degrees=", ".join(config.TEACHER_DEGREES)
-            )
-            lines.append(formatted_line)
+        result = {"students": [], "teachers": []}
+        
+        for key in ["students", "teachers"]:
+            lines = day_instructions.get(key, [])
+            for line in lines:
+                formatted_line = line.format(
+                    max_year=self.max_valid_birth_year,
+                    forms=forms,
+                    levels=levels,
+                    institutes=institutes,
+                    group_rules=group_rules,
+                    teacher_positions=", ".join(config.TEACHER_POSITIONS),
+                    teacher_departments=", ".join(config.TEACHER_DEPARTMENTS),
+                    teacher_degrees=", ".join(config.TEACHER_DEGREES)
+                )
+                result[key].append(formatted_line)
 
-        return lines
+        return result
 
     def get_group_rules_text(self) -> str:
         rules = []
@@ -327,30 +327,25 @@ class Economy:
 
 class Document:
     """
-    Представляет собой документ (студенческий билет или пропуск), предъявляемый посетителем.
-    Содержит личные данные, информацию об обучении или должности.
+    Базовый класс для документов (студенческий билет или пропуск).
+    Содержит общие личные данные.
     """
+    document_type = "Base"
+
     def __init__(
         self,
         full_name: str = "",
-        group: str = "",
-        birth_date: Optional[date] = None,
-        education_form: str = "",
-        education_level: str = "",
+        birth_date = None,
         institute: str = "",
-        issue_date: Optional[date] = None,
-        document_type: str = config.DOCUMENT_TYPE_STUDENT,
-        seed: Optional[int] = None,
+        issue_date = None,
+        seed: int | None = None,
     ):
         self.full_name = full_name
-        self.group = group
         self.birth_date = birth_date
-        self.education_form = education_form
-        self.education_level = education_level
         self.institute = institute
         self.issue_date = issue_date
-        self.document_type = document_type
-        self.seed = seed if seed is not None else random.randint(1, 2000000000)
+        import random as rnd
+        self.seed = seed if seed is not None else rnd.randint(1, 2000000000)
 
     def display_birth_date(self) -> str:
         return display_date(self.birth_date)
@@ -358,7 +353,105 @@ class Document:
     def display_issue_date(self) -> str:
         return display_date(self.issue_date)
 
+    def get_display_data(self) -> list[str]:
+        raise NotImplementedError
+
+    def apply_random_error(self, reason: str, random_source, rules) -> None:
+        raise NotImplementedError
+
+    def check_group(self, rules, errors: list[str]) -> None:
+        raise NotImplementedError
+
+    def check_education_form(self, rules, errors: list[str]) -> None:
+        raise NotImplementedError
+
+    def check_education_level(self, rules, errors: list[str]) -> None:
+        raise NotImplementedError
+
     def to_save_data(self) -> dict:
+        raise NotImplementedError
+
+    @staticmethod
+    def from_save_data(data) -> "Document | None":
+        if not isinstance(data, dict):
+            return None
+
+        import config
+        doc_type = str(data.get(config.SAVE_DOCUMENT_TYPE, config.DOCUMENT_TYPE_STUDENT))
+        if doc_type == config.DOCUMENT_TYPE_VIP:
+            return VipDocument.from_save_data(data)
+        
+        return StudentDocument.from_save_data(data)
+
+
+class StudentDocument(Document):
+    import config
+    document_type = config.DOCUMENT_TYPE_STUDENT
+
+    def __init__(
+        self,
+        full_name: str = "",
+        group: str = "",
+        birth_date = None,
+        education_form: str = "",
+        education_level: str = "",
+        institute: str = "",
+        issue_date = None,
+        seed: int | None = None,
+    ):
+        super().__init__(full_name, birth_date, institute, issue_date, seed)
+        self.group = group
+        self.education_form = education_form
+        self.education_level = education_level
+
+    def get_display_data(self) -> list[str]:
+        import config
+        return [
+            self.document_type,
+            f"{config.PERSON_FULL_NAME_TEXT}: {self.full_name}",
+            f"{config.PERSON_GROUP_TEXT}: {self.group}",
+            f"{config.PERSON_BIRTH_DATE_TEXT}: {self.display_birth_date()}",
+            f"{config.EDUCATION_FORM_TEXT}: {self.education_form}",
+            f"{config.EDUCATION_LEVEL_TEXT}: {self.education_level}",
+            f"{config.INSTITUTE_TEXT}: {self.institute}",
+            f"{config.ISSUE_DATE_TEXT}: {self.display_issue_date()}",
+        ]
+
+    def apply_random_error(self, reason: str, random_source, rules) -> None:
+        import config
+        if reason == config.BAD_GROUP_FORMAT:
+            self.group = random_source.choice(config.BAD_GROUP_VARIANTS)
+        elif reason == config.BAD_EDUCATION_FORM:
+            self.education_form = random_source.choice(config.BAD_EDUCATION_FORMS)
+        elif reason == config.BAD_EDUCATION_LEVEL:
+            self.education_level = random_source.choice(config.BAD_EDUCATION_LEVELS)
+        elif reason == config.BAD_INSTITUTE:
+            self.institute = random_source.choice(config.BAD_INSTITUTES)
+
+    def check_group(self, rules, errors: list[str]) -> None:
+        import re
+        import config
+        if not re.match(rules.group_pattern, self.group):
+            errors.append(config.ERROR_BAD_GROUP_FORMAT)
+            return
+
+        prefix = self.group.split(config.GROUP_SEPARATOR)[0]
+        if prefix not in rules.institute_group_prefixes.get(self.institute, []):
+            if hasattr(config, "ERROR_BAD_GROUP_PREFIX"):
+                errors.append(config.ERROR_BAD_GROUP_PREFIX)
+
+    def check_education_form(self, rules, errors: list[str]) -> None:
+        import config
+        if self.education_form not in rules.valid_education_forms:
+            errors.append(config.ERROR_BAD_EDUCATION_FORM)
+
+    def check_education_level(self, rules, errors: list[str]) -> None:
+        import config
+        if self.education_level not in rules.valid_education_levels:
+            errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
+
+    def to_save_data(self) -> dict:
+        import config
         return {
             config.SAVE_FULL_NAME: self.full_name,
             config.SAVE_GROUP: self.group,
@@ -372,11 +465,9 @@ class Document:
         }
 
     @staticmethod
-    def from_save_data(data) -> Optional["Document"]:
-        if not isinstance(data, dict):
-            return None
-
-        return Document(
+    def from_save_data(data: dict) -> "StudentDocument":
+        import config
+        return StudentDocument(
             full_name=str(data.get(config.SAVE_FULL_NAME, "")),
             group=str(data.get(config.SAVE_GROUP, "")),
             birth_date=date_from_save(data.get(config.SAVE_BIRTH_DATE)),
@@ -384,7 +475,94 @@ class Document:
             education_level=str(data.get(config.SAVE_EDUCATION_LEVEL, "")),
             institute=str(data.get(config.SAVE_INSTITUTE, "")),
             issue_date=date_from_save(data.get(config.SAVE_ISSUE_DATE)),
-            document_type=str(data.get(config.SAVE_DOCUMENT_TYPE, config.DOCUMENT_TYPE_STUDENT)),
+            seed=data.get(config.SAVE_SEED),
+        )
+
+
+class VipDocument(Document):
+    import config
+    document_type = config.DOCUMENT_TYPE_VIP
+
+    def __init__(
+        self,
+        full_name: str = "",
+        position: str = "",
+        birth_date = None,
+        department: str = "",
+        degree: str = "",
+        institute: str = "",
+        issue_date = None,
+        seed: int | None = None,
+    ):
+        super().__init__(full_name, birth_date, institute, issue_date, seed)
+        self.position = position
+        self.department = department
+        self.degree = degree
+
+    def get_display_data(self) -> list[str]:
+        import config
+        return [
+            self.document_type,
+            f"{config.PERSON_FULL_NAME_TEXT}: {self.full_name}",
+            f"{config.PERSON_POSITION_TEXT}: {self.position}",
+            f"{config.PERSON_BIRTH_DATE_TEXT}: {self.display_birth_date()}",
+            f"{config.PERSON_DEPARTMENT_TEXT}: {self.department}",
+            f"{config.PERSON_DEGREE_TEXT}: {self.degree}",
+            f"{config.INSTITUTE_TEXT}: {self.institute}",
+            f"{config.ISSUE_DATE_TEXT}: {self.display_issue_date()}",
+        ]
+
+    def apply_random_error(self, reason: str, random_source, rules) -> None:
+        import config
+        if reason == config.BAD_GROUP_FORMAT:
+            self.position = random_source.choice(config.BAD_TEACHER_POSITIONS)
+        elif reason == config.BAD_EDUCATION_FORM:
+            self.department = random_source.choice(config.BAD_TEACHER_DEPARTMENTS)
+        elif reason == config.BAD_EDUCATION_LEVEL:
+            self.degree = random_source.choice(config.BAD_TEACHER_DEGREES)
+        elif reason == config.BAD_INSTITUTE:
+            self.institute = random_source.choice(config.BAD_INSTITUTES)
+
+    def check_group(self, rules, errors: list[str]) -> None:
+        import config
+        if self.position not in config.TEACHER_POSITIONS:
+            errors.append(config.ERROR_BAD_GROUP_FORMAT)
+
+    def check_education_form(self, rules, errors: list[str]) -> None:
+        import config
+        if self.department not in config.TEACHER_DEPARTMENTS:
+            errors.append(config.ERROR_BAD_EDUCATION_FORM)
+
+    def check_education_level(self, rules, errors: list[str]) -> None:
+        import config
+        if self.degree not in config.TEACHER_DEGREES:
+            errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
+
+    def to_save_data(self) -> dict:
+        import config
+        return {
+            config.SAVE_FULL_NAME: self.full_name,
+            config.SAVE_GROUP: self.position,
+            config.SAVE_BIRTH_DATE: date_to_save(self.birth_date),
+            config.SAVE_EDUCATION_FORM: self.department,
+            config.SAVE_EDUCATION_LEVEL: self.degree,
+            config.SAVE_INSTITUTE: self.institute,
+            config.SAVE_ISSUE_DATE: date_to_save(self.issue_date),
+            config.SAVE_DOCUMENT_TYPE: self.document_type,
+            config.SAVE_SEED: self.seed,
+        }
+
+    @staticmethod
+    def from_save_data(data: dict) -> "VipDocument":
+        import config
+        return VipDocument(
+            full_name=str(data.get(config.SAVE_FULL_NAME, "")),
+            position=str(data.get(config.SAVE_GROUP, "")),
+            birth_date=date_from_save(data.get(config.SAVE_BIRTH_DATE)),
+            department=str(data.get(config.SAVE_EDUCATION_FORM, "")),
+            degree=str(data.get(config.SAVE_EDUCATION_LEVEL, "")),
+            institute=str(data.get(config.SAVE_INSTITUTE, "")),
+            issue_date=date_from_save(data.get(config.SAVE_ISSUE_DATE)),
             seed=data.get(config.SAVE_SEED),
         )
 
@@ -398,7 +576,7 @@ class Person:
         self,
         full_name: str = "",
         group: str = "",
-        birth_date: Optional[date] = None,
+        birth_date = None,
         document: Optional[Document] = None,
         is_important: bool = False,
         gender: str = "",
@@ -422,25 +600,7 @@ class Person:
         if self.document is None:
             return [config.NO_DOCUMENT_TEXT]
 
-        if self.document.document_type == config.DOCUMENT_TYPE_VIP:
-            group_label = config.PERSON_POSITION_TEXT
-            edu_form_label = config.PERSON_DEPARTMENT_TEXT
-            edu_level_label = config.PERSON_DEGREE_TEXT
-        else:
-            group_label = config.PERSON_GROUP_TEXT
-            edu_form_label = config.EDUCATION_FORM_TEXT
-            edu_level_label = config.EDUCATION_LEVEL_TEXT
-
-        return [
-            self.document.document_type,
-            f"{config.PERSON_FULL_NAME_TEXT}: {self.document.full_name}",
-            f"{group_label}: {self.document.group}",
-            f"{config.PERSON_BIRTH_DATE_TEXT}: {self.document.display_birth_date()}",
-            f"{edu_form_label}: {self.document.education_form}",
-            f"{edu_level_label}: {self.document.education_level}",
-            f"{config.INSTITUTE_TEXT}: {self.document.institute}",
-            f"{config.ISSUE_DATE_TEXT}: {self.document.display_issue_date()}",
-        ]
+        return self.document.get_display_data()
 
     def to_save_data(self) -> dict:
         document_data = None
@@ -470,7 +630,6 @@ class Person:
             is_important=bool(data.get(config.SAVE_IS_IMPORTANT, False)),
             gender=str(data.get("gender", config.GENDER_MALE)),
         )
-
 
 class CheckResult:
     """
@@ -542,30 +701,38 @@ class PersonGenerator:
 
     def _generate_valid_person(self) -> Person:
         is_important = self.random.random() < 0.30
-        document_type = config.DOCUMENT_TYPE_VIP if is_important else config.DOCUMENT_TYPE_STUDENT
 
         institute = self.random.choice(self.rules.valid_institutes)
 
         if is_important:
             gender = config.GENDER_MALE
-            education_form = self.random.choice(config.TEACHER_DEPARTMENTS)
-            education_level = self.random.choice(config.TEACHER_DEGREES)
+            department = self.random.choice(config.TEACHER_DEPARTMENTS)
+            degree = self.random.choice(config.TEACHER_DEGREES)
             group = self.random.choice(config.TEACHER_POSITIONS)
+            birth_date = self._generate_birth_date(1950, 2000)
+            full_name = self._generate_full_name(gender)
+            issue_date = self._generate_valid_issue_date(birth_date)
+            
+            document = VipDocument(
+                full_name=full_name,
+                position=group,
+                birth_date=birth_date,
+                department=department,
+                degree=degree,
+                institute=institute,
+                issue_date=issue_date,
+                seed=self.random.randint(1, 2000000000),
+            )
         else:
             gender = self.random.choice(config.GENDERS)
             education_form = self.random.choice(self.rules.valid_education_forms)
             education_level = self.random.choice(self.rules.valid_education_levels)
             group = self._generate_valid_group(institute)
-
-        full_name = self._generate_full_name(gender)
-        birth_date = self._generate_valid_birth_date()
-        issue_date = self._generate_valid_issue_date(birth_date)
-
-        return Person(
-            full_name=full_name,
-            group=group,
-            birth_date=birth_date,
-            document=Document(
+            birth_date = self._generate_valid_birth_date()
+            full_name = self._generate_full_name(gender)
+            issue_date = self._generate_valid_issue_date(birth_date)
+            
+            document = StudentDocument(
                 full_name=full_name,
                 group=group,
                 birth_date=birth_date,
@@ -573,9 +740,14 @@ class PersonGenerator:
                 education_level=education_level,
                 institute=institute,
                 issue_date=issue_date,
-                document_type=document_type,
                 seed=self.random.randint(1, 2000000000),
-            ),
+            )
+
+        return Person(
+            full_name=full_name,
+            group=group,
+            birth_date=birth_date,
+            document=document,
             is_important=is_important,
             gender=gender,
         )
@@ -596,27 +768,30 @@ class PersonGenerator:
             document.birth_date = self._generate_invalid_birth_date()
         elif reason == config.BAD_ISSUE_DATE:
             document.issue_date = self._generate_bad_issue_date(document.birth_date)
-        elif reason == config.BAD_GROUP_FORMAT:
-            if document.document_type == config.DOCUMENT_TYPE_VIP:
-                document.group = self.random.choice(config.BAD_TEACHER_POSITIONS)
-            else:
-                document.group = self.random.choice(config.BAD_GROUP_VARIANTS)
-        elif reason == config.BAD_EDUCATION_FORM:
-            if document.document_type == config.DOCUMENT_TYPE_VIP:
-                document.education_form = self.random.choice(config.BAD_TEACHER_DEPARTMENTS)
-            else:
-                document.education_form = self.random.choice(config.BAD_EDUCATION_FORMS)
-        elif reason == config.BAD_EDUCATION_LEVEL:
-            if document.document_type == config.DOCUMENT_TYPE_VIP:
-                document.education_level = self.random.choice(config.BAD_TEACHER_DEGREES)
-            else:
-                document.education_level = self.random.choice(config.BAD_EDUCATION_LEVELS)
-        elif reason == config.BAD_INSTITUTE:
-            document.institute = self.random.choice(config.BAD_INSTITUTES)
         elif reason == config.BAD_NOT_UNIQUE_PASS:
-            document.document_type = config.DOCUMENT_TYPE_STUDENT
+            person.document = StudentDocument(
+                full_name=document.full_name,
+                group=getattr(document, 'group', getattr(document, 'position', "")),
+                birth_date=document.birth_date,
+                education_form=getattr(document, 'education_form', getattr(document, 'department', "")),
+                education_level=getattr(document, 'education_level', getattr(document, 'degree', "")),
+                institute=document.institute,
+                issue_date=document.issue_date,
+                seed=document.seed
+            )
         elif reason == config.BAD_IMPOSTER:
-            document.document_type = config.DOCUMENT_TYPE_VIP
+            person.document = VipDocument(
+                full_name=document.full_name,
+                position=getattr(document, 'group', getattr(document, 'position', "")),
+                birth_date=document.birth_date,
+                department=getattr(document, 'education_form', getattr(document, 'department', "")),
+                degree=getattr(document, 'education_level', getattr(document, 'degree', "")),
+                institute=document.institute,
+                issue_date=document.issue_date,
+                seed=document.seed
+            )
+        else:
+            document.apply_random_error(reason, self.random, self.rules)
 
     def _generate_full_name(self, gender: str) -> str:
 
@@ -648,12 +823,11 @@ class PersonGenerator:
         return date(year, month, day)
 
     def _generate_valid_issue_date(self, birth_date: date) -> date:
-        issue_year = self.random.randint(config.MIN_ISSUE_YEAR, config.MAX_ISSUE_YEAR)
-        return date(issue_year, config.ISSUE_DATE_MONTH, config.ISSUE_DATE_DAY)
+        return date(config.ISSUE_DATE_YEAR, config.ISSUE_DATE_MONTH, config.ISSUE_DATE_DAY)
 
     def _generate_bad_issue_date(self, birth_date: Optional[date]) -> date:
         day, month = config.ISSUE_DATE_DAY, config.ISSUE_DATE_MONTH
-        issue_year = self.random.randint(config.MIN_ISSUE_YEAR, config.MAX_ISSUE_YEAR)
+        issue_year = config.ISSUE_DATE_YEAR
         
         if self.random.random() < 0.5:
             day, month = self.random.choice(getattr(config, "BAD_ISSUE_DATE_VARIANTS", [(1, 9), (2, 9)]))
@@ -686,6 +860,9 @@ class Checker:
         if person.document is None:
             return
 
+        if isinstance(person.document, VipDocument):
+            return
+
         birth_date = person.document.birth_date
 
         if birth_date is None or birth_date.year > self.rules.max_valid_birth_year:
@@ -703,51 +880,17 @@ class Checker:
     def check_group(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
             return
-
-        group = person.document.group
-
-        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
-            if group not in config.TEACHER_POSITIONS:
-                errors.append(config.ERROR_BAD_GROUP_FORMAT)
-            return
-
-        if not re.match(self.rules.group_pattern, group):
-            errors.append(config.ERROR_BAD_GROUP_FORMAT)
-            return
-
-        prefix = group.split(config.GROUP_SEPARATOR)[0]
-        if prefix not in self.rules.institute_group_prefixes.get(person.document.institute, []):
-            if hasattr(config, 'ERROR_BAD_GROUP_PREFIX'):
-                errors.append(config.ERROR_BAD_GROUP_PREFIX)
-            return
+        person.document.check_group(self.rules, errors)
 
     def check_education_form(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
             return
-
-        form = person.document.education_form
-
-        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
-            if form not in config.TEACHER_DEPARTMENTS:
-                errors.append(config.ERROR_BAD_EDUCATION_FORM)
-            return
-
-        if form not in self.rules.valid_education_forms:
-            errors.append(config.ERROR_BAD_EDUCATION_FORM)
+        person.document.check_education_form(self.rules, errors)
 
     def check_education_level(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
             return
-
-        level = person.document.education_level
-
-        if person.document.document_type == config.DOCUMENT_TYPE_VIP:
-            if level not in config.TEACHER_DEGREES:
-                errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
-            return
-
-        if level not in self.rules.valid_education_levels:
-            errors.append(config.ERROR_BAD_EDUCATION_LEVEL)
+        person.document.check_education_level(self.rules, errors)
 
     def check_institute(self, person: Person, errors: List[str]) -> None:
         if person.document is None:
@@ -760,9 +903,10 @@ class Checker:
         if person.document is None:
             return
             
-        if person.is_important and person.document.document_type != config.DOCUMENT_TYPE_VIP:
+        is_doc_vip = isinstance(person.document, VipDocument)
+        if person.is_important and not is_doc_vip:
             errors.append(config.ERROR_NOT_UNIQUE_PASS)
-        elif not person.is_important and person.document.document_type == config.DOCUMENT_TYPE_VIP:
+        elif not person.is_important and is_doc_vip:
             errors.append(config.ERROR_IMPOSTER)
 
     def is_issue_date_correct(
@@ -776,7 +920,7 @@ class Checker:
             return False
         if issue_date.month != config.ISSUE_DATE_MONTH:
             return False
-        if issue_date.year < config.MIN_ISSUE_YEAR or issue_date.year > config.MAX_ISSUE_YEAR:
+        if issue_date.year != config.ISSUE_DATE_YEAR:
             return False
 
         return True

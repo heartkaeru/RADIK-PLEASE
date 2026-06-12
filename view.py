@@ -2,6 +2,7 @@ import pygame
 
 import config
 import procedural
+import model
 
 
 class Screen:
@@ -18,7 +19,10 @@ class Screen:
         self.myfont = self.create_font(config.GAME_FONT_SIZE)
         self.title_font = self.create_font(config.TITLE_FONT_SIZE)
         self.button_font = self.create_font(config.BUTTON_FONT_SIZE)
-        self.instruction_font = self.create_font(config.INSTRUCTION_FONT_SIZE)
+        try:
+            self.instruction_font = pygame.font.Font(config.INSTRUCTION_FONT_PATH, config.INSTRUCTION_FONT_SIZE)
+        except Exception:
+            self.instruction_font = self.create_font(config.INSTRUCTION_FONT_SIZE)
         self.student_card_font = self.create_font(config.STUDENT_CARD_FONT_SIZE)
 
         icon = pygame.image.load(config.ICON_PATH)
@@ -45,12 +49,14 @@ class Screen:
         
         for person_id in ["male", "female", "professor"]:
             person_img = pygame.image.load(f"assets/images/{person_id}/straight.png").convert_alpha()
-            self.person_images[person_id] = pygame.transform.scale(person_img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT))
+            scale_factor = config.PERSON_RECT_HEIGHT / person_img.get_height()
+            new_width = int(person_img.get_width() * scale_factor)
+            self.person_images[person_id] = pygame.transform.scale(person_img, (new_width, config.PERSON_RECT_HEIGHT))
 
             frames = []
             for name in ["left.png", "left2.png"]:
                 img = pygame.image.load(f"assets/images/{person_id}/{name}").convert_alpha()
-                frames.append(pygame.transform.scale(img, (config.PERSON_RECT_WIDTH, config.PERSON_RECT_HEIGHT)))
+                frames.append(pygame.transform.scale(img, (int(img.get_width() * scale_factor), config.PERSON_RECT_HEIGHT)))
             self.walk_frames[person_id] = frames
 
         self.person_rect = pygame.Rect(
@@ -83,8 +89,7 @@ class Screen:
             
         try:
             speech_bubble_img = pygame.image.load(config.SPEECH_BUBBLE_PATH).convert_alpha()
-            # Уменьшим или отмасштабируем баббл, если нужно. Допустим, 250x150
-            self.speech_bubble_image = pygame.transform.scale(speech_bubble_img, (250, 150))
+            self.speech_bubble_image = pygame.transform.scale(speech_bubble_img, (400, 250))
         except Exception:
             self.speech_bubble_image = None
 
@@ -294,6 +299,9 @@ class Screen:
                 # Add a small bobbing effect for walking
                 if frame_index % 2 != 0:
                     person_rect.y -= 10
+            
+            person_rect.width = img.get_width()
+            person_rect.height = img.get_height()
             self.game_scene.blit(img, person_rect)
             
             if speech_bubble_text and self.speech_bubble_image:
@@ -373,7 +381,7 @@ class Screen:
         panel.y = config.STUDENT_CARD_PANEL_Y
 
         seed = person.document.seed if person.document else 0
-        is_vip = person.document.document_type == config.DOCUMENT_TYPE_VIP if person.document else False
+        is_vip = isinstance(person.document, model.VipDocument) if person.document else False
 
         person_id = "male"
         if person:
@@ -422,8 +430,8 @@ class Screen:
         self.screen.blit(sig_surf, (sig_x, sig_y))
 
     def draw_instruction(self, instruction_lines) -> None:
-        if instruction_lines is None:
-            instruction_lines = []
+        if not instruction_lines:
+            instruction_lines = {"students": [], "teachers": []}
 
         panel = pygame.Rect(0, 0, config.INSTRUCTION_PANEL_WIDTH, config.INSTRUCTION_PANEL_HEIGHT)
         panel.center = (self.width // 2, self.height // 2)
@@ -434,22 +442,18 @@ class Screen:
             pygame.draw.rect(self.screen, config.INSTRUCTION_PANEL_COLOR, panel)
             pygame.draw.rect(self.screen, config.INSTRUCTION_BORDER_COLOR, panel, 2)
 
-        title = self.button_font.render(config.INSTRUCTION_TITLE_TEXT, True, config.INSTRUCTION_TEXT_COLOR)
-        title_rect = title.get_rect(center=(panel.centerx, panel.y + config.INSTRUCTION_PANEL_PADDING))
-        self.screen.blit(title, title_rect)
+        left_x = panel.x + 240
+        left_y = panel.y + 120
+        max_width = 340
 
-        x = panel.x + config.INSTRUCTION_PANEL_PADDING
-        y = panel.y + config.INSTRUCTION_TITLE_GAP
-        max_width = panel.width - config.INSTRUCTION_PANEL_PADDING * 2
+        for line in instruction_lines.get("students", []):
+            left_y = self.draw_text_with_spaces(line, self.instruction_font, config.INSTRUCTION_TEXT_COLOR, left_x, left_y, max_width, config.INSTRUCTION_LINE_GAP)
 
-        for line in instruction_lines:
-            wrapped_lines = self.wrap_text(line, self.instruction_font, max_width)
-            for wrapped_line in wrapped_lines:
-                text = self.instruction_font.render(wrapped_line, True, config.INSTRUCTION_TEXT_COLOR)
-                self.screen.blit(text, (x, y))
-                y += self.instruction_font.get_height() + config.INSTRUCTION_LINE_GAP
+        right_x = panel.centerx + 40
+        right_y = panel.y + 120
 
-            y += config.INSTRUCTION_LINE_GAP
+        for line in instruction_lines.get("teachers", []):
+            right_y = self.draw_text_with_spaces(line, self.instruction_font, config.INSTRUCTION_TEXT_COLOR, right_x, right_y, max_width, config.INSTRUCTION_LINE_GAP)
 
     def draw_title(self, text: str) -> None:
         title = self.title_font.render(text, True, config.MENU_TEXT_COLOR)
@@ -577,6 +581,32 @@ class Screen:
     def get_volume_text(self, template: str, volume: float) -> str:
         volume_percent = int(volume * config.VOLUME_PERCENT)
         return template.format(volume=volume_percent)
+
+    def draw_text_with_spaces(self, text: str, font: pygame.font.Font, color: tuple, x: int, y: int, max_width: int, line_gap: int) -> int:
+        if not text:
+            return y + font.get_height() + line_gap
+            
+        words = text.split()
+        space_width = font.size(" ")[0]
+        if space_width < 5:
+            space_width = 12
+
+        current_x = x
+        current_y = y
+        max_line_height = font.get_height()
+
+        for word in words:
+            word_surface = font.render(word, True, color)
+            word_width, word_height = word_surface.get_size()
+
+            if current_x + word_width > x + max_width and current_x != x:
+                current_x = x
+                current_y += max_line_height + line_gap
+
+            self.screen.blit(word_surface, (current_x, current_y))
+            current_x += word_width + space_width
+
+        return current_y + max_line_height + line_gap
 
     def wrap_text(self, text: str, font: pygame.font.Font, max_width: int) -> list:
         words = text.split()

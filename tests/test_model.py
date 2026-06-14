@@ -1,20 +1,29 @@
-import pytest
 from datetime import date
 
 import config
-from model import Checker, Decision, Document, Economy, GameModel, GameRules, Person, PersonGenerator
+from mvc.model import (
+    Checker,
+    Decision,
+    Document,
+    StudentDocument,
+    Economy,
+    GameModel,
+    GameRules,
+    Person,
+    PersonGenerator,
+)
 
 
 def make_valid_person() -> Person:
     birth_date = date(2007, 1, 1)
-    document = Document(
+    document = StudentDocument(
         full_name="Иванов Иван Иванович",
         group="ЭК-123456",
         birth_date=birth_date,
         education_form="очная",
         education_level="бакалавриат",
         institute="ИнЭУ",
-        issue_date=date(2024, 9, 1),
+        issue_date=date(2026, 9, 1),
     )
 
     return Person(

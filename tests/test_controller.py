@@ -1,8 +1,6 @@
-import pytest
-
 import config
-from controller import GameController
-from model import Decision, RoundResult
+from mvc.controller import GameController
+from mvc.model import Decision, RoundResult
 
 
 class TestGameController:
@@ -76,11 +74,26 @@ class TestGameController:
 
     def test_get_default_settings(self):
         settings = self.controller.get_default_settings()
-        assert settings[config.SETTING_MUSIC_ENABLED] == config.DEFAULT_MUSIC_ENABLED
-        assert settings[config.SETTING_SOUND_ENABLED] == config.DEFAULT_SOUND_ENABLED
-        assert settings[config.SETTING_MUSIC_VOLUME] == config.DEFAULT_MUSIC_VOLUME
-        assert settings[config.SETTING_SOUND_VOLUME] == config.DEFAULT_SOUND_VOLUME
-        assert settings[config.SETTING_WINDOW_MODE_NUMBER] == config.DEFAULT_WINDOW_MODE_NUMBER
+        assert (
+            settings[config.SETTING_MUSIC_ENABLED]
+            == config.DEFAULT_MUSIC_ENABLED
+        )
+        assert (
+            settings[config.SETTING_SOUND_ENABLED]
+            == config.DEFAULT_SOUND_ENABLED
+        )
+        assert (
+            settings[config.SETTING_MUSIC_VOLUME]
+            == config.DEFAULT_MUSIC_VOLUME
+        )
+        assert (
+            settings[config.SETTING_SOUND_VOLUME]
+            == config.DEFAULT_SOUND_VOLUME
+        )
+        assert (
+            settings[config.SETTING_WINDOW_MODE_NUMBER]
+            == config.DEFAULT_WINDOW_MODE_NUMBER
+        )
 
     def test_get_balance_without_game_model(self):
         self.controller.game_model = None

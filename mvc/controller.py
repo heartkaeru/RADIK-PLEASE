@@ -4,19 +4,22 @@ import os
 import pygame
 
 import config
-from model import Decision, GameModel
-from view import Screen
-from pool import ObjectPool, FloatingTextEffect
-from behavior_tree import build_visitor_tree
+from mvc.model import Decision, GameModel
+from mvc.view import Screen
+from systems.pool import ObjectPool, FloatingTextEffect
+from systems.behavior_tree import build_visitor_tree
 
 
 class GameController:
     """
     Основной контроллер игры.
     Управляет циклом событий, взаимодействием между моделью (GameModel) и видом (Screen),
-    а также обработкой пользовательского ввода и переключением экранов.
+    а также обработкой пользовательского ввода (мышь/клавиатура) и переключением экранов.
     """
     def __init__(self):
+        """
+        Инициализация движка Pygame и системы звука
+        """
         pygame.init()
         pygame.mixer.init()
 
@@ -60,9 +63,12 @@ class GameController:
         self.apply_window_mode()
 
     def run(self):
-        """Запускает основной игровой цикл."""
+        """
+        Запускает основной игровой цикл. Крутится бесконечно, пока игра открыта.
+        """
         while self.view.running:
             dt = self.clock.tick(60) / 1000.0
+
             self.handle_events()
             self.update_game_state(dt)
             self.draw_current_screen()
@@ -70,7 +76,9 @@ class GameController:
         pygame.quit()
 
     def draw_current_screen(self):
-        """Определяет текущий экран и вызывает соответствующий метод отрисовки во view."""
+        """
+        Определяет текущий экран и вызывает соответствующий метод отрисовки во view (отрисовщике).
+        """
         if self.screen_name == config.SCREEN_MENU:
             self.view.draw_menu(self.has_save())
         elif self.screen_name == config.SCREEN_SETTINGS:
@@ -82,8 +90,12 @@ class GameController:
             )
         elif self.screen_name == config.SCREEN_GAME:
             day, date_str, time_str = self.game_model.get_time_info()
-            visitor_pos = (self.visitor_x, config.PERSON_RECT_Y) if self.visitor_visible else None
-            student_card_on_table = (self.visitor_state == "AT_DESK")
+            visitor_pos = (
+                (self.visitor_x, config.PERSON_RECT_Y)
+                if self.visitor_visible
+                else None
+            )
+            student_card_on_table = self.visitor_state == "AT_DESK"
             self.view.draw_game(
                 self.get_balance(),
                 day,
@@ -116,11 +128,13 @@ class GameController:
 
         if self.fade_alpha > 0:
             self.view.draw_fade(self.fade_alpha)
-            
+
         self.view.update_screen()
 
     def handle_events(self):
-        """Обрабатывает события Pygame (ввод с клавиатуры, мыши, закрытие окна)."""
+        """
+        Обрабатывает события Pygame (ввод с клавиатуры, клики мыши, закрытие окна крестиком).
+        """
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.save_game()
@@ -132,7 +146,10 @@ class GameController:
                 self.handle_mouse_down(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 self.handle_mouse_up(event.pos)
-            elif event.type == pygame.MOUSEMOTION and self.active_slider is not None:
+            elif (
+                event.type == pygame.MOUSEMOTION
+                and self.active_slider is not None
+            ):
                 self.handle_slider_drag(event.pos)
 
     def handle_escape(self):
@@ -157,7 +174,9 @@ class GameController:
 
     def handle_day_summary_click(self, mouse_pos):
         if config.BUTTON_NEXT_DAY in self.view.menu_buttons:
-            if self.view.menu_buttons[config.BUTTON_NEXT_DAY].collidepoint(mouse_pos):
+            if self.view.menu_buttons[config.BUTTON_NEXT_DAY].collidepoint(
+                mouse_pos
+            ):
                 self.game_model.start_new_day()
                 self.game_model.next_round()
                 self.screen_name = config.SCREEN_GAME
@@ -173,7 +192,9 @@ class GameController:
 
     def handle_tutorial_click(self, mouse_pos):
         if config.BUTTON_TUTORIAL_CONTINUE in self.view.menu_buttons:
-            if self.view.menu_buttons[config.BUTTON_TUTORIAL_CONTINUE].collidepoint(mouse_pos):
+            if self.view.menu_buttons[
+                config.BUTTON_TUTORIAL_CONTINUE
+            ].collidepoint(mouse_pos):
                 self.screen_name = config.SCREEN_GAME
 
     def handle_menu_click(self, mouse_pos):
@@ -181,7 +202,11 @@ class GameController:
 
         if buttons[config.BUTTON_START].collidepoint(mouse_pos):
             self.start_game()
-        elif config.BUTTON_CONTINUE in buttons and buttons[config.BUTTON_CONTINUE].collidepoint(mouse_pos) and self.has_save():
+        elif (
+            config.BUTTON_CONTINUE in buttons
+            and buttons[config.BUTTON_CONTINUE].collidepoint(mouse_pos)
+            and self.has_save()
+        ):
             self.continue_game()
         elif buttons[config.BUTTON_SETTINGS].collidepoint(mouse_pos):
             self.screen_name = config.SCREEN_SETTINGS
@@ -219,7 +244,9 @@ class GameController:
             self.allow_pressed = True
         elif self.view.is_deny_button_clicked(mouse_pos):
             self.deny_pressed = True
-        elif self.has_current_document() and self.view.is_student_card_clicked(mouse_pos):
+        elif self.has_current_document() and self.view.is_student_card_clicked(
+            mouse_pos
+        ):
             if self.visitor_state == "AT_DESK":
                 self.student_card_open = not self.student_card_open
 
@@ -227,13 +254,17 @@ class GameController:
         if self.active_slider is not None:
             self.save_settings()
             self.active_slider = None
-            
+
         if self.screen_name == config.SCREEN_GAME and mouse_pos is not None:
-            if self.allow_pressed and self.view.is_allow_button_clicked(mouse_pos):
+            if self.allow_pressed and self.view.is_allow_button_clicked(
+                mouse_pos
+            ):
                 self.make_decision(Decision.ALLOW)
-            elif self.deny_pressed and self.view.is_deny_button_clicked(mouse_pos):
+            elif self.deny_pressed and self.view.is_deny_button_clicked(
+                mouse_pos
+            ):
                 self.make_decision(Decision.DENY)
-                
+
             self.allow_pressed = False
             self.deny_pressed = False
 
@@ -264,7 +295,7 @@ class GameController:
             self.load_game()
 
         self.game_started = True
-        
+
         if self.game_model.day_finished:
             self.screen_name = config.SCREEN_DAY_SUMMARY
         else:
@@ -278,7 +309,9 @@ class GameController:
             self.speech_bubble_text = None
 
     def update_game_state(self, dt):
-        """Обновляет состояние игры (анимации, движение персонажа) с учетом прошедшего времени (dt)."""
+        """
+        Обновляет состояние игры (анимации, движение персонажа) с учетом прошедшего времени (dt).
+        """
         if self.screen_name == config.SCREEN_TUTORIAL:
             return
 
@@ -301,7 +334,7 @@ class GameController:
                 self.fade_alpha = 0
                 self.fade_state = "NONE"
             return
-            
+
         if self.visitor_tree and self.visitor_visible:
             self.visitor_tree.tick(self, dt)
 
@@ -322,16 +355,21 @@ class GameController:
 
     def make_decision(self, decision):
         """
-        Устанавливает решение игрока, которое затем будет обработано деревом поведения.
+        Устанавливает решение игрока (пропустить/отказать),
+        которое затем будет обработано деревом поведения (ИИ студента отреагирует на это).
         """
         if self.decision_made is None:
             self.decision_made = decision
 
     def get_result_text(self, result):
         if result.is_correct:
-            return config.RESULT_CORRECT_TEXT.format(money_delta=result.money_delta)
+            return config.RESULT_CORRECT_TEXT.format(
+                money_delta=result.money_delta
+            )
 
-        return config.RESULT_MISTAKE_TEXT.format(money_delta=result.money_delta)
+        return config.RESULT_MISTAKE_TEXT.format(
+            money_delta=result.money_delta
+        )
 
     def get_balance(self):
         if self.game_model is None:
@@ -343,7 +381,10 @@ class GameController:
         if self.game_model is None:
             return None
 
-        if self.visitor_state == "WALKING_OUT" and self.leaving_person is not None:
+        if (
+            self.visitor_state == "WALKING_OUT"
+            and self.leaving_person is not None
+        ):
             return self.leaving_person
 
         return self.game_model.current_person
@@ -381,7 +422,9 @@ class GameController:
             return
         try:
             data = self.game_model.to_save_data()
-            with open(config.SAVE_FILE, "w", encoding="utf-8", newline="\r\n") as file:
+            with open(
+                config.SAVE_FILE, "w", encoding="utf-8", newline="\r\n"
+            ) as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
         except Exception:
             pass
@@ -408,11 +451,15 @@ class GameController:
         self.save_settings()
 
     def set_music_volume_by_mouse(self, mouse_pos):
-        self.music_volume = self.get_volume_from_slider(config.SLIDER_MUSIC_VOLUME, mouse_pos)
+        self.music_volume = self.get_volume_from_slider(
+            config.SLIDER_MUSIC_VOLUME, mouse_pos
+        )
         pygame.mixer.music.set_volume(self.music_volume)
 
     def set_sound_volume_by_mouse(self, mouse_pos):
-        self.sound_volume = self.get_volume_from_slider(config.SLIDER_SOUND_VOLUME, mouse_pos)
+        self.sound_volume = self.get_volume_from_slider(
+            config.SLIDER_SOUND_VOLUME, mouse_pos
+        )
 
     def slider_has_mouse(self, slider_name, mouse_pos):
         slider = self.view.settings_sliders[slider_name]
@@ -457,7 +504,9 @@ class GameController:
             return settings
 
         try:
-            with open(config.SETTINGS_FILE, "r", encoding=config.SETTINGS_ENCODING) as file:
+            with open(
+                config.SETTINGS_FILE, "r", encoding=config.SETTINGS_ENCODING
+            ) as file:
                 saved_settings = json.load(file)
         except (OSError, ValueError):
             return settings
@@ -485,8 +534,10 @@ class GameController:
             settings[config.SETTING_SOUND_VOLUME],
             config.DEFAULT_SOUND_VOLUME,
         )
-        settings[config.SETTING_WINDOW_MODE_NUMBER] = self.fix_window_mode_number(
-            settings[config.SETTING_WINDOW_MODE_NUMBER]
+        settings[config.SETTING_WINDOW_MODE_NUMBER] = (
+            self.fix_window_mode_number(
+                settings[config.SETTING_WINDOW_MODE_NUMBER]
+            )
         )
 
         return settings

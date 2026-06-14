@@ -3,14 +3,17 @@ from enum import Enum
 import pygame
 import config
 
+
 class NodeStatus(Enum):
     SUCCESS = 1
     FAILURE = 2
     RUNNING = 3
 
+
 class BTNode:
     def tick(self, context, dt) -> NodeStatus:
         raise NotImplementedError
+
 
 class Sequence(BTNode):
     def __init__(self, children):
@@ -18,6 +21,9 @@ class Sequence(BTNode):
         self.current_index = 0
 
     def tick(self, context, dt) -> NodeStatus:
+        """
+        Если мы уже выполнили все узлы, возвращаем успех
+        """
         if self.current_index >= len(self.children):
             return NodeStatus.SUCCESS
 
@@ -32,11 +38,15 @@ class Sequence(BTNode):
         elif status == NodeStatus.FAILURE:
             self.current_index = 0
             return NodeStatus.FAILURE
-        
+
         return NodeStatus.RUNNING
 
     def reset(self):
+        """
+        Сброс индекса, чтобы начать последовательность сначала
+        """
         self.current_index = 0
+
 
 class Selector(BTNode):
     def __init__(self, children):
@@ -58,27 +68,38 @@ class Selector(BTNode):
                 self.current_index = 0
                 return NodeStatus.FAILURE
             return NodeStatus.RUNNING
-        
+
         return NodeStatus.RUNNING
 
     def reset(self):
         self.current_index = 0
 
+
 class WalkInAction(BTNode):
     def tick(self, context, dt) -> NodeStatus:
+        """
+        Устанавливаем состояние контроллера, чтобы он знал, что мы идем
+        """
         context.visitor_state = "WALKING_IN"
         context.visitor_x -= 1000 * dt
         if context.visitor_x <= config.PERSON_RECT_X:
             context.visitor_x = config.PERSON_RECT_X
             context.visitor_state = "AT_DESK"
             return NodeStatus.SUCCESS
+
         return NodeStatus.RUNNING
+
 
 class WaitDecisionAction(BTNode):
     def tick(self, context, dt) -> NodeStatus:
+        """
+        Если в контексте (контроллере) появилось решение (игрок нажал кнопку печати),
+        то ожидание успешно закончено.
+        """
         if context.decision_made is not None:
             return NodeStatus.SUCCESS
         return NodeStatus.RUNNING
+
 
 class ProcessReactionAction(BTNode):
     def __init__(self):
@@ -88,13 +109,12 @@ class ProcessReactionAction(BTNode):
 
     def tick(self, context, dt) -> NodeStatus:
         person = context.get_current_person()
-        
+
         bribe_pending = getattr(context, "bribe_pending", False)
-        
+
         if not self.started:
             self.started = True
-            
-            # Обработка ответа на взятку (второе решение)
+
             if bribe_pending:
                 if context.decision_made.name == "ALLOW":
                     context.game_model.economy.add_money(50)
@@ -102,22 +122,28 @@ class ProcessReactionAction(BTNode):
                 self.started = False
                 return NodeStatus.SUCCESS
 
-            # Если не VIP, или первое решение - ALLOW, просто идем дальше
-            if not person or not person.is_important or context.decision_made.name == "ALLOW":
+            if (
+                not person
+                or not person.is_important
+                or context.decision_made.name == "ALLOW"
+            ):
                 self.started = False
                 return NodeStatus.SUCCESS
-                
-            # Проверяем, действительно ли его не нужно было пропускать
-            check_result = context.game_model.checker.get_result(person, context.game_model.get_active_checks())
-            
-            # Если у него есть ошибки (allow == False) и шанс 50%
+
+            check_result = context.game_model.checker.get_result(
+                person, context.game_model.get_active_checks()
+            )
+
             if not check_result.allow and random.random() < 0.50:
                 self.is_bribe = True
                 self.timer = 2.0
-                context.speech_bubble_text = "Я дам тебе небольшую сумму, пропусти"
-                context.bribe_pending = True
+                context.speech_bubble_text = (
+                    "Я дам тебе небольшую сумму, пропусти"
+                )
+                context.bribe_pending = (
+                    True
+                )
             else:
-                # Нет взятки - нет возмущений
                 self.started = False
                 return NodeStatus.SUCCESS
 
@@ -130,38 +156,53 @@ class ProcessReactionAction(BTNode):
             return NodeStatus.RUNNING
 
         self.started = False
-        
+
         if self.is_bribe:
-            return NodeStatus.FAILURE # Вызовет повторение цикла ввода
-            
+            return NodeStatus.FAILURE
+
         return NodeStatus.SUCCESS
+
 
 class FinalizeDecisionAction(BTNode):
     def tick(self, context, dt) -> NodeStatus:
-        # Применяем решение к модели
         decision = context.decision_made
         context.leaving_person = context.get_current_person()
+
         result = context.game_model.decide(decision)
-        
+
         text = context.get_result_text(result)
-        color = config.RESULT_CORRECT_COLOR if result.is_correct else config.RESULT_MISTAKE_COLOR
+        color = (
+            config.RESULT_CORRECT_COLOR
+            if result.is_correct
+            else config.RESULT_MISTAKE_COLOR
+        )
         effect = context.effect_pool.get()
-        effect.reset(text, color, context.view.myfont, config.RESULT_X, config.RESULT_Y)
+        effect.reset(
+            text, color, context.view.myfont, config.RESULT_X, config.RESULT_Y
+        )
         context.active_effects.append(effect)
-        
+
         context.student_card_open = False
-        
+
         if result.game_over:
             go_effect = context.effect_pool.get()
-            go_effect.reset(result.game_over_reason, config.RESULT_MISTAKE_COLOR, context.view.myfont, config.RESULT_X, config.RESULT_Y + 40, is_static=True)
+            go_effect.reset(
+                result.game_over_reason,
+                config.RESULT_MISTAKE_COLOR,
+                context.view.myfont,
+                config.RESULT_X,
+                config.RESULT_Y + 40,
+                is_static=True,
+            )
             context.active_effects.append(go_effect)
             context.next_visitor_time = None
             context.delete_save()
         else:
             context.next_visitor_time = None
             context.save_game()
-            
+
         return NodeStatus.SUCCESS
+
 
 class WalkOutAction(BTNode):
     def tick(self, context, dt) -> NodeStatus:
@@ -170,17 +211,20 @@ class WalkOutAction(BTNode):
         if context.visitor_x <= -config.PERSON_RECT_WIDTH:
             context.visitor_state = "NONE"
             context.visitor_visible = False
-            
-            # Проверка конца дня после полного ухода
+
             if context.game_model and not context.game_model.game_over:
                 if context.game_model.day_finished:
-                    context.fade_state = "FADE_OUT"
+                    context.fade_state = (
+                        "FADE_OUT"
+                    )
                     context.next_visitor_time = None
                 else:
                     context.next_visitor_time = pygame.time.get_ticks() + 200
-                    
+
             return NodeStatus.SUCCESS
+
         return NodeStatus.RUNNING
+
 
 class RepeatUntilSuccess(BTNode):
     def __init__(self, child):
@@ -196,19 +240,19 @@ class RepeatUntilSuccess(BTNode):
             return NodeStatus.RUNNING
         return NodeStatus.RUNNING
 
+
 def build_visitor_tree():
-    interaction_sequence = Sequence([
-        WaitDecisionAction(),
-        ProcessReactionAction()
-    ])
-    
+    """
+    Цикл взаимодействия: ждем решения, обрабатываем реакцию (взятку)
+    """
+    interaction_sequence = Sequence(
+        [WaitDecisionAction(), ProcessReactionAction()]
+    )
+
     loop = RepeatUntilSuccess(interaction_sequence)
-    
-    root = Sequence([
-        WalkInAction(),
-        loop,
-        FinalizeDecisionAction(),
-        WalkOutAction()
-    ])
-    
+
+    root = Sequence(
+        [WalkInAction(), loop, FinalizeDecisionAction(), WalkOutAction()]
+    )
+
     return root

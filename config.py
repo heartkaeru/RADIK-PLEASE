@@ -3,7 +3,6 @@ DEFAULT_FINE = 5
 DEFAULT_DISMISSAL_BALANCE = -50
 DEFAULT_MONEY = 0
 
-
 MIN_BIRTH_YEAR = 2002
 MAX_BIRTH_YEAR = 2015
 MAX_VALID_BIRTH_YEAR = 2007
@@ -18,13 +17,17 @@ ISSUE_DATE_YEAR = 2026
 MIN_GROUP_NUMBER = 100000
 MAX_GROUP_NUMBER = 999999
 GROUP_SEPARATOR = "-"
-GROUP_PATTERN = r"^[А-ЯЁ]{2}-\d{6}$"
+GROUP_PATTERN = (
+    r"^[А-ЯЁ]{2}-\d{6}$"
+)
+
 VALID_GROUP_PREFIXES = ("РИ", "ИС", "ПИ", "БИ", "ЭК", "МТ")
 BAD_GROUP_VARIANTS = ("123456", "АА123456", "A1-000001", "ГРУППА")
 
 GENDER_FEMALE = "female"
 GENDER_MALE = "male"
 GENDERS = (GENDER_FEMALE, GENDER_MALE)
+
 
 FEMALE_NAMES = (
     "Анна",
@@ -400,7 +403,12 @@ BAD_EDUCATION_FORMS = (
     "В любое время",
     "По индивидуальному плану",
 )
-EDUCATION_LEVELS = ("бакалавриат", "специалитет", "магистратура", "аспирантура")
+EDUCATION_LEVELS = (
+    "бакалавриат",
+    "специалитет",
+    "магистратура",
+    "аспирантура",
+)
 BAD_EDUCATION_LEVELS = (
     "Болезненное",
     "Низкое",
@@ -459,19 +467,56 @@ BAD_INSTITUTES = (
     "Факультет без расписания",
 )
 
-TEACHER_POSITIONS = ("Профессор", "Доцент", "Старший преподаватель", "Ассистент")
-BAD_TEACHER_POSITIONS = ("Директор", "Начальник", "Учитель", "Менеджер", "Охранник", "Дворник")
+TEACHER_POSITIONS = (
+    "Профессор",
+    "Доцент",
+    "Старший преподаватель",
+    "Ассистент",
+)
+BAD_TEACHER_POSITIONS = (
+    "Директор",
+    "Начальник",
+    "Учитель",
+    "Менеджер",
+    "Охранник",
+    "Дворник",
+)
 
 TEACHER_DEGREES = ("Доктор наук", "Кандидат наук", "Без степени")
-BAD_TEACHER_DEGREES = ("Магистр магии", "Академик", "Доктор всея Руси", "Студент", "Бакалавр наук")
+BAD_TEACHER_DEGREES = (
+    "Магистр магии",
+    "Академик",
+    "Доктор всея Руси",
+    "Студент",
+    "Бакалавр наук",
+)
 
-TEACHER_DEPARTMENTS = ("Кафедра ПИ", "Кафедра ИС", "Кафедра БИ", "Кафедра ЭК", "Кафедра РИ", "Кафедра МТ")
-BAD_TEACHER_DEPARTMENTS = ("Кафедра магии", "Кафедра отдыха", "Отдел продаж", "Бухгалтерия")
+TEACHER_DEPARTMENTS = (
+    "Кафедра ПИ",
+    "Кафедра ИС",
+    "Кафедра БИ",
+    "Кафедра ЭК",
+    "Кафедра РИ",
+    "Кафедра МТ",
+)
+BAD_TEACHER_DEPARTMENTS = (
+    "Кафедра магии",
+    "Кафедра отдыха",
+    "Отдел продаж",
+    "Бухгалтерия",
+)
 
 DECISION_ALLOW = "allow"
 DECISION_DENY = "deny"
 ALLOW_DECISIONS = ("allow", "accept", "pass", "пропустить", "допустить")
-DENY_DECISIONS = ("deny", "reject", "kick", "вышвырнуть", "отказать", "не пропустить")
+DENY_DECISIONS = (
+    "deny",
+    "reject",
+    "kick",
+    "вышвырнуть",
+    "отказать",
+    "не пропустить",
+)
 
 NO_DOCUMENT = "no_document"
 BAD_BIRTH_DATE = "bad_birth_date"
@@ -504,7 +549,13 @@ ALL_CHECKS = (
 CHECKS_BY_DAY = {
     1: (CHECK_DOCUMENT, CHECK_BIRTH_DATE),
     2: (CHECK_DOCUMENT, CHECK_BIRTH_DATE, CHECK_ISSUE_DATE, CHECK_VIP),
-    3: (CHECK_DOCUMENT, CHECK_BIRTH_DATE, CHECK_ISSUE_DATE, CHECK_GROUP, CHECK_VIP),
+    3: (
+        CHECK_DOCUMENT,
+        CHECK_BIRTH_DATE,
+        CHECK_ISSUE_DATE,
+        CHECK_GROUP,
+        CHECK_VIP,
+    ),
     4: (
         CHECK_DOCUMENT,
         CHECK_BIRTH_DATE,
@@ -554,7 +605,6 @@ PERSON_DEGREE_TEXT = "Ученая степень"
 INSTITUTE_TEXT = "Институт"
 ISSUE_DATE_TEXT = "Дата выдачи"
 NO_DOCUMENT_TEXT = "Студенческого билета нет"
-
 
 
 ERROR_NO_DOCUMENT = "Нет студенческого билета"
@@ -689,14 +739,16 @@ DAY_SUMMARY_MISTAKES = "Ошибок: {mistakes}"
 DAY_SUMMARY_MONEY_EARNED = "Заработано: {earned} ₽"
 DAY_SUMMARY_MONEY_LOST = "Штрафы: {lost} ₽"
 DAY_SUMMARY_TOTAL = "Итого за день: {total} ₽"
-DAY_SUMMARY_ADVICE = "Совет: перед началом смены ознакомьтесь с новыми правилами в инструкции."
+DAY_SUMMARY_ADVICE = (
+    "Совет: перед началом смены ознакомьтесь с новыми правилами в инструкции."
+)
 DAY_SUMMARY_NEXT_TEXT = "Начать следующий день"
 TUTORIAL_TITLE = "Как играть"
 TUTORIAL_TEXT = [
     "Вам предстоит проверять документы посетителей.",
     "В начале каждого дня обязательно ознакомьтесь",
     "с инструкцией на столе, чтобы узнать",
-    "актуальные правила пропуска."
+    "актуальные правила пропуска.",
 ]
 TUTORIAL_CONTINUE_TEXT = "Понятно"
 
@@ -766,6 +818,7 @@ RESULT_Y = 215
 DAY_VISITORS_COUNT = 15
 DAY_MIN_BAD_VISITORS = 1
 DAY_MAX_BAD_VISITORS = 3
+
 DAY_PLAN_POPULATION_SIZE = 50
 DAY_PLAN_GENERATIONS = 100
 DAY_PLAN_MUTATION_CHANCE = 0.1
@@ -823,25 +876,25 @@ INSTRUCTIONS_BY_DAY = {
             "",
             "ИНСТРУКЦИЯ:",
             "Нажмите зеленую кнопку чтобы пропустить",
-            "и красную в ином случае."
+            "и красную в ином случае.",
         ],
         "teachers": [
             "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
-            "- Обязательно удостоверение преподавателя."
-        ]
+            "- Обязательно удостоверение преподавателя.",
+        ],
     },
     2: {
         "students": [
             "ПРАВИЛА ПРОПУСКА СТУДЕНТОВ:",
             "- Обязателен студенческий билет.",
             "- Год рождения студента не позднее {max_year}.",
-            "- Дата выдачи строго 01.09.2026."
+            "- Дата выдачи строго 01.09.2026.",
         ],
         "teachers": [
             "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
             "- Обязательно удостоверение преподавателя.",
-            "- Дата выдачи строго 01.09.2026."
-        ]
+            "- Дата выдачи строго 01.09.2026.",
+        ],
     },
     3: {
         "students": [
@@ -849,15 +902,15 @@ INSTRUCTIONS_BY_DAY = {
             "- Обязателен студенческий билет.",
             "- Год рождения студента не позднее {max_year}.",
             "- Дата выдачи строго 01.09.2026.",
-            "- Группа студента: формат АА-123456."
+            "- Группа студента: формат АА-123456.",
         ],
         "teachers": [
             "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
             "- Обязательно удостоверение преподавателя.",
             "- Дата выдачи строго 01.09.2026.",
             "- Должность преподавателя:",
-            "  {teacher_positions}."
-        ]
+            "  {teacher_positions}.",
+        ],
     },
     4: {
         "students": [
@@ -867,7 +920,7 @@ INSTRUCTIONS_BY_DAY = {
             "- Дата выдачи строго 01.09.2026.",
             "- Группа студента: формат АА-123456.",
             "- Форма обучения студента: {forms}.",
-            "- Уровень обучения студента: {levels}."
+            "- Уровень обучения студента: {levels}.",
         ],
         "teachers": [
             "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
@@ -875,8 +928,8 @@ INSTRUCTIONS_BY_DAY = {
             "- Дата выдачи строго 01.09.2026.",
             "- Должность преподавателя: {teacher_positions}.",
             "- Кафедра: {teacher_departments}.",
-            "- Ученая степень: {teacher_degrees}."
-        ]
+            "- Ученая степень: {teacher_degrees}.",
+        ],
     },
     5: {
         "students": [
@@ -888,7 +941,7 @@ INSTRUCTIONS_BY_DAY = {
             "- Форма обучения студента: {forms}.",
             "- Уровень обучения студента: {levels}.",
             "- Разрешенные институты:",
-            "  {institutes}"
+            "  {institutes}",
         ],
         "teachers": [
             "ПРАВИЛА ПРОПУСКА ПРЕПОДАВАТЕЛЕЙ:",
@@ -896,8 +949,8 @@ INSTRUCTIONS_BY_DAY = {
             "- Дата выдачи строго 01.09.2026.",
             "- Должность преподавателя: {teacher_positions}.",
             "- Кафедра: {teacher_departments}.",
-            "- Ученая степень: {teacher_degrees}."
-        ]
-    }
+            "- Ученая степень: {teacher_degrees}.",
+        ],
+    },
 }
 SPEECH_BUBBLE_PATH = "assets/images/speech_bubble.png"

@@ -506,18 +506,6 @@ BAD_TEACHER_DEPARTMENTS = (
     "Бухгалтерия",
 )
 
-DECISION_ALLOW = "allow"
-DECISION_DENY = "deny"
-ALLOW_DECISIONS = ("allow", "accept", "pass", "пропустить", "допустить")
-DENY_DECISIONS = (
-    "deny",
-    "reject",
-    "kick",
-    "вышвырнуть",
-    "отказать",
-    "не пропустить",
-)
-
 NO_DOCUMENT = "no_document"
 BAD_BIRTH_DATE = "bad_birth_date"
 BAD_ISSUE_DATE = "bad_issue_date"
@@ -618,10 +606,7 @@ ERROR_BAD_INSTITUTE = "Неизвестный институт"
 ERROR_NOT_UNIQUE_PASS = "Требуется удостоверение преподавателя"
 ERROR_IMPOSTER = "Чужое удостоверение"
 
-MESSAGE_NO_CURRENT_PERSON = "Нельзя принять решение: нет текущего посетителя"
-MESSAGE_GAME_ALREADY_OVER = "Игра окончена"
 MESSAGE_DISMISSED = "Долг слишком большой, вы уволены"
-MESSAGE_UNKNOWN_DECISION = "Неизвестное решение игрока: {decision}"
 
 PERSON_RECT_X = 850
 PERSON_RECT_Y = 220

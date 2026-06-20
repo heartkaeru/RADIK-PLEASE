@@ -36,6 +36,8 @@ class GameController:
         self.music_volume = settings[config.SETTING_MUSIC_VOLUME]
         self.sound_volume = settings[config.SETTING_SOUND_VOLUME]
         self.window_mode_number = settings[config.SETTING_WINDOW_MODE_NUMBER]
+        if not self.music_enabled:
+            pygame.mixer.music.pause()
         self.game_started = False
         self.game_model = None
         self.instruction_open = False
@@ -56,9 +58,6 @@ class GameController:
         self.visitor_tree = None
         self.decision_made = None
         self.speech_bubble_text = None
-
-        if not self.music_enabled:
-            pygame.mixer.music.pause()
 
         self.apply_window_mode()
 

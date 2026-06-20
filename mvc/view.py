@@ -248,7 +248,6 @@ class Screen:
         }
 
     def update_menu_buttons(self, has_save: bool) -> None:
-        """Обновляет кнопки главного меню в зависимости от наличия сохранения."""
         if getattr(self, "last_has_save", None) == has_save:
             return
         self.last_has_save = has_save
@@ -291,7 +290,6 @@ class Screen:
         )
 
     def create_image_button(self, path: str, size: int) -> pygame.Surface:
-        """Загружает и масштабирует изображение для кнопки-печати."""
         img = pygame.image.load(path).convert_alpha()
         return pygame.transform.scale(img, (size, size))
 
@@ -304,10 +302,6 @@ class Screen:
         height: int,
         offset_y: int = 0,
     ) -> pygame.Rect:
-        """
-        Универсальная фабрика для создания UI-элементов (кнопок, слайдеров).
-        Рассчитывает положение элемента по центру экрана с заданным смещением.
-        """
         x = self.width // 2 - width // 2
         y = start_y + number * gap_y + offset_y
         return pygame.Rect(x, y, width, height)
@@ -440,9 +434,6 @@ class Screen:
         visitor_state: str = "NONE",
         speech_bubble_text: str = None,
     ) -> None:
-        """
-        Рисуем задний фон (стену кабинета)
-        """
         self.game_scene.blit(
             self.background_image, (config.BACKGROUND_X, config.BACKGROUND_Y)
         )

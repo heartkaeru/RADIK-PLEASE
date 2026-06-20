@@ -228,8 +228,8 @@ def date_from_save(value) -> Optional[date]:
 
 
 class Decision(Enum):
-    ALLOW = config.DECISION_ALLOW
-    DENY = config.DECISION_DENY
+    ALLOW = "allow"
+    DENY = "deny"
 
 
 class GameRules:
@@ -331,10 +331,9 @@ class Economy:
         return -value
 
     def apply_result(self, is_correct: bool) -> int:
-        if is_correct:
-            return self.add_money()
-
-        return self.fine()
+        delta = self.reward if is_correct else -self.fine_amount
+        self.money += delta
+        return delta
 
 
 class Document:
@@ -1111,61 +1110,46 @@ class GameModel:
         self._daily_mistakes = 0
         self._daily_money_earned = 0
         self._daily_money_lost = 0
-
         self.start_new_day()
         self.next_round()
-
     @property
     def round_number(self) -> int:
         return self._round_number
-
     @property
     def day_number(self) -> int:
         return self._day_number
-
     @property
     def current_person(self) -> Optional[Person]:
         return self._current_person
-
     @property
     def last_result(self) -> Optional[RoundResult]:
         return self._last_result
-
     @property
     def game_over(self) -> bool:
         return self._game_over
-
     @property
     def game_over_reason(self) -> str:
         return self._game_over_reason
-
     @property
     def day_finished(self) -> bool:
         return self._day_finished
-
     @property
     def daily_processed(self) -> int:
         return self._daily_processed
-
     @property
     def daily_correct(self) -> int:
         return self._daily_correct
-
     @property
     def daily_mistakes(self) -> int:
         return self._daily_mistakes
-
     @property
     def daily_money_earned(self) -> int:
         return self._daily_money_earned
-
     @property
     def daily_money_lost(self) -> int:
         return self._daily_money_lost
-
     def start_new_day(self) -> None:
         self._day_number += 1
-
         self._day_plan = self.day_planner.make_plan(self._day_number)
         self._day_plan_index = 0
         self._day_finished = False
@@ -1219,11 +1203,11 @@ class GameModel:
 
         return self.generator.generate()
 
-    def decide(self, decision: Union[Decision, str, bool]) -> RoundResult:
+    def decide(self, decision: Union[Decision, bool]) -> RoundResult:
         if self._current_person is None:
-            raise RuntimeError(config.MESSAGE_NO_CURRENT_PERSON)
+            raise RuntimeError("Cannot make a decision: no current person")
         if self._game_over:
-            raise RuntimeError(config.MESSAGE_GAME_ALREADY_OVER)
+            raise RuntimeError("Game is already over")
 
         player_decision = self._normalize_decision(decision)
         check_result = self.checker.get_result(
@@ -1310,6 +1294,11 @@ class GameModel:
         }
 
     @staticmethod
+    def fix_day_plan(data) -> List[bool]:
+        if not isinstance(data, list):
+            return []
+        return [bool(x) for x in data]
+    @staticmethod
     def from_save_data(data) -> "GameModel":
         game = GameModel()
 
@@ -1365,19 +1354,10 @@ class GameModel:
         return plan
 
     @staticmethod
-    def _normalize_decision(decision: Union[Decision, str, bool]) -> Decision:
+    def _normalize_decision(decision: Union[Decision, bool]) -> Decision:
         if isinstance(decision, Decision):
             return decision
         if isinstance(decision, bool):
             return Decision.ALLOW if decision else Decision.DENY
 
-        value = decision.strip().lower()
-
-        if value in config.ALLOW_DECISIONS:
-            return Decision.ALLOW
-        if value in config.DENY_DECISIONS:
-            return Decision.DENY
-
-        raise ValueError(
-            config.MESSAGE_UNKNOWN_DECISION.format(decision=decision)
-        )
+        raise ValueError(f"Unknown player decision: {decision}")

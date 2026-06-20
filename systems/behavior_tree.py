@@ -243,7 +243,8 @@ class RepeatUntilSuccess(BTNode):
 
 def build_visitor_tree():
     """
-    Цикл взаимодействия: ждем решения, обрабатываем реакцию (взятку)
+    Создает и возвращает корневой узел дерева поведения для ИИ-посетителя.
+    Определяет логику поведения каждого гостя.
     """
     interaction_sequence = Sequence(
         [WaitDecisionAction(), ProcessReactionAction()]
